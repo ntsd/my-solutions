@@ -149,8 +149,8 @@ def bishopmove():
             if bo1:
                 return "Yes"
             return "No"
-        if bx1 in list(range(min(qx1, tx1), max(qx1, tx1))) \
-           and by1 in list(range(min(qy1, ty1), max(qy1, ty1))):
+        if bx1 > min(qx1, tx1) and bx1 < max(qx1, tx1) \
+           and by1 > min(qy1, ty1)and by1 < max(qy1, ty1):
             return "No"
         return "Yes"
     return "No"
