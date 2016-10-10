@@ -11,6 +11,7 @@ def leapyr(n):
 def days_diff(date1, date2):
     """
         Find absolute diff in days between dates
+        not done
     """
     date = sorted(list([date1, date2])) #sort before date first
     y1 = date[0][0]
