@@ -1,7 +1,9 @@
 def min(*args, **kwargs):
     key = kwargs.get("key", None)
-    print(type(args[0]), key)
-    if type(args[0]) == int or type(args[0]) == float:
+    print(type(args), key, args, len(args))
+    if len(args) > 1:
+        check = args
+    elif type(args[0]) == int or type(args[0]) == float:
         check = args
         m = 9999999999999999
     elif type(args[0]) == list or type(args[0]) == tuple:
@@ -25,17 +27,26 @@ def min(*args, **kwargs):
                 m = i
                 num = n
     except:
-        m = chr(255)
-        for n, i in enumerate(check2):
-            if i < m:
-                m = i
-                num = n
+        try:
+            m = chr(255)
+            for n, i in enumerate(check2):
+                if i < m:
+                    m = i
+                    num = n
+        except:
+            m = 9999999999999999
+            for n, i in enumerate(check2):
+                if i[0] < m:
+                    m = i[0]
+                    num = n
     return check[num]
 
 def max(*args, **kwargs):
     key = kwargs.get("key", None)
-    print(type(args[0]), key)
-    if type(args[0]) == int or type(args[0]) == float:
+    print(type(args), key, args, len(args))
+    if len(args) > 1:
+        check = args
+    elif type(args[0]) == int or type(args[0]) == float:
         check = args
     elif type(args[0]) == list or type(args[0]) == tuple:
         check = args[0]
@@ -55,15 +66,21 @@ def max(*args, **kwargs):
                 m = i
                 num = n
     except:
-        m = chr(0)
-        for n, i in enumerate(check2):
-            if i > m:
-                m = i
-                num = n
+        try:
+            m = chr(0)
+            for n, i in enumerate(check2):
+                if i > m:
+                    m = i
+                    num = n
+        except:
+            m = -9999999999999999
+            for n, i in enumerate(check2):
+                if i[0] > m:
+                    m = i[0]
+                    num = n
     return check[num]
 
 if __name__ == '__main__':
-    #These "asserts" using only for self-checking and not necessary for auto-testing
     assert max(3, 2) == 3, "Simple case max"
     assert min(3, 2) == 2, "Simple case min"
     assert max([1, 2, 0, 3, 4]) == 4, "From a list"
