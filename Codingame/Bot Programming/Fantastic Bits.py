@@ -165,16 +165,7 @@ class Wizard:
         return str(self.x)+" "+str(self.y)+" "+str(self.team)
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
-    def obstacle_intrajectory(self, a, b):
-        for bludger in self.list_bludgers:
-            x = bludger.x
-            if abs(bludger.y-a*x-b) <= 200:
-                return True
-        for o in self.list_opponents:
-            x = o.x
-            if abs(o.y-a*x-b) <= 400:
-                return True
-        return False
+    
 
 class Snaffle:
     def __init__(self, id, x, y, vx, vy):
@@ -214,7 +205,9 @@ class  Bludger:
 
 my_team_id = int(raw_input())  # if 0 you need to score on the right of the map, if 1 you need to score on the left
 goals= [Point(16000, 3750),Point(0, 3750)]
+# goals= [Point(16000, 3600),Point(0, 3600)]
 goal = goals[my_team_id]
+x_lines = [16000,0]
 mana = 0
 cd_obliviate, cd_petrificus, cd_accio, cd_flipendo = 0, 0, 0, 0
 
@@ -252,40 +245,33 @@ while True:
     for i in xrange(2):
         myWizard = myWizards[i]  
         snaffles = sorted(snaffles, key=lambda snaffle: snaffle.dist(myWizard))
-        snaffle = snaffles[0]
-        distClosetSnaffle  = snaffle.dist(myWizard)
+        closetSnaffle = snaffles[0]
+        distClosetSnaffle  = closetSnaffle.dist(myWizard)
         closetBludger = sorted(bludgers, key=lambda bludger: bludger.dist(myWizard))[0]
         distClosetBludger = closetBludger.dist
         
         #FLIPENDO
         doFLIPENDO = 0
         if (mana > 20 and distClosetSnaffle < 10000**2 and cd_flipendo == 0):
-            if snaffle.x != myWizard.x:
-                a_line = (snaffle.y - myWizard.y)/(snaffle.x - myWizard.x)
+            if closetSnaffle.x != myWizard.x:
+                a_line = (closetSnaffle.y - myWizard.y)/(closetSnaffle.x - myWizard.x)
                 b_line = myWizard.y - a_line * myWizard.x
-                if myWizard.team == 0:
-                    x_line = 16000
-                    y_line = a_line*x_line+b_line
-                    if y_line>= 3500 and y_line <= 3900:
-                        if not myWizard.obstacle_intrajectory(a_line, b_line):
-                            print "FLIPENDO ",snaffle._id
-                            cd_flipendo += 3
-                            mana-=20
-                            doFLIPENDO = 1
-                        else:
-                            doFLIPENDO = 0
-                if myWizard.team == 1:
-                    x_line = 0
-                    y_line = a_line*x_line+b_line
-                    if y_line>= 3500 and y_line <= 3900:
-                         if not myWizard.obstacle_intrajectory(a_line, b_line):
-                            print "FLIPENDO ",snaffle._id
-                            cd_flipendo += 3
-                            mana-=20
-                            doFLIPENDO = 1
-                         else:
-                            doFLIPENDO = 0
-        
+                x_line = x_lines[myWizard.team]
+                y_line = a_line*x_line+b_line
+                if y_line>= 3500 and y_line <= 3900:
+                    obstacle_intrajectory=0
+                    for bludger in bludgers:
+                        if abs(bludger.y-a_line*bludger.x-b_line) <= 200:
+                            obstacle_intrajectory=1
+                    for o in enemyWizards:
+                        if abs(o.y-a_line*o.x-b_line) <= 400:
+                            obstacle_intrajectory=1
+                    if not obstacle_intrajectory:
+                        print "FLIPENDO ",closetSnaffle._id
+                        cd_flipendo = 3
+                        mana-=20
+                        doFLIPENDO = 1
+                         
         #ACCIO 
         if (mana>=20 and cd_accio == 0 and doFLIPENDO == 0):
             best_accio = None
@@ -304,9 +290,9 @@ while True:
                         dist_snaffle = tmp
             print "ACCIO", best_accio.id
             mana -= 20
-            cd_accio += 6
+            cd_accio = 6
         
-        #OBLIVIATE
+        # OBLIVIATE
         # elif (mana>=5 and cd_obliviate == 0 and distClosetBludger < 2000**2 and distClosetBludger > 0 ):
         #     print "OBLIVIATE", bludgers[0].id
         #     mana -= 5
@@ -318,9 +304,9 @@ while True:
         #     mana -= 10
         #     cd_petrificus += 1
             
-        
+        elif myWizard.state == 0:
+            print "MOVE",closetSnaffle.x,closetSnaffle.y,100
         
         elif myWizard.state == 1:
             print "THROW",int(goal.x),int(goal.y),500       
-        else:
-            print "MOVE",snaffle.x,snaffle.y,100
+        
