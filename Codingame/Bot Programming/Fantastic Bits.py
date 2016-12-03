@@ -143,13 +143,9 @@ class Point(object):
     def __repr__(self):
         return('({}, {})'.format(self.x, self.y))
 
-my_team_id = int(raw_input())  # if 0 you need to score on the right of the map, if 1 you need to score on the left
-goals= [Point(16000, 3750),Point(0, 3750)]
-goal = goals[my_team_id]
-magic = 100
-
 class Wizard:
-    def __init__(self, id, team, x, y, vx, vy, state):
+    def __init__(self, id, team, x, y, vx, vy, state,\
+    mana, cd_obliviate, cd_petrificus, cd_accio, cd_flipendo):
         self.id = id
         self.team = team
         self.x = x
@@ -158,12 +154,27 @@ class Wizard:
         self.vy = vy
         self.state = state
         self.radius  = 400
+        self.mana = mana
+        self.cd_accio = cd_accio
+        self.cd_obliviate = cd_obliviate
+        self.cd_petrificus = cd_petrificus
+        self.cd_flipendo  = cd_flipendo
     def __repr__(self):
         return str(self.x)+" "+str(self.y)+" "+str(self.team)
     def __str__(self):
         return str(self.x)+" "+str(self.y)+" "+str(self.team)
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
+    def obstacle_intrajectory(self, a, b):
+        for bludger in self.list_bludgers:
+            x = bludger.x
+            if abs(bludger.y-a*x-b) <= 200:
+                return True
+        for o in self.list_opponents:
+            x = o.x
+            if abs(o.y-a*x-b) <= 400:
+                return True
+        return False
 
 class Snaffle:
     def __init__(self, id, x, y, vx, vy):
@@ -177,8 +188,8 @@ class Snaffle:
         return str(self.x)+" "+str(self.y)
     def __str__(self):
         return str(self.x)+" "+str(self.y)
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y   
+    # def __eq__(self, other):
+    #     return self.x == other.x and self.y == other.y   
     def dist(self, P):
         return math.sqrt(pow(self.x - P.x, 2) + pow(self.y - P.y, 2))
         
@@ -201,12 +212,25 @@ class  Bludger:
     def setTarget(self, target):
         self.target = target
 
+my_team_id = int(raw_input())  # if 0 you need to score on the right of the map, if 1 you need to score on the left
+goals= [Point(16000, 3750),Point(0, 3750)]
+goal = goals[my_team_id]
+mana = 0
+cd_obliviate, cd_petrificus, cd_accio, cd_flipendo = 0, 0, 0, 0
+
 while True:
+    mana+=1
+    if cd_obliviate!=0:cd_obliviate-=1
+    if cd_petrificus!=0:cd_petrificus-=1
+    if cd_accio!=0:cd_accio-=1
+    if cd_flipendo!=0:cd_flipendo-=1
+    
     entities = int(raw_input())  # number of entities still in game
     myWizards = []
     enemyWizards = []
     snaffles = []
     bludgers = []
+    
     for i in xrange(entities):
         entity_id, entity_type, x, y, vx, vy, state = raw_input().split()
         # print >> sys.stderr, (entity_id, entity_type, x, y, vx, vy, state)
@@ -217,29 +241,86 @@ while True:
         vy = int(vy)
         state = int(state)
         if entity_type == "WIZARD":
-            myWizards.append(Wizard(entity_id,0,x,y,vx,vy,state))
+            myWizards.append(Wizard(entity_id,my_team_id,x,y,vx,vy,state,mana,cd_obliviate, cd_petrificus, cd_accio, cd_flipendo))
         elif entity_type == "OPPONENT_WIZARD":
-            enemyWizards.append(Wizard(entity_id,1,x,y,vx,vy,state))
+            enemyWizards.append(Wizard(entity_id,abs(my_team_id-1),x,y,vx,vy,state,mana,cd_obliviate, cd_petrificus, cd_accio, cd_flipendo))
         elif entity_type == "SNAFFLE":
             snaffles.append(Snaffle(entity_id,x,y,vx,vy))
         elif entity_type == "BLUDGER":
-            bludgers.append(Bludger(x, y, vx, vy))
+            bludgers.append(Bludger(entity_id,x, y, vx, vy))
                
     for i in xrange(2):
         myWizard = myWizards[i]  
         snaffles = sorted(snaffles, key=lambda snaffle: snaffle.dist(myWizard))
-        # print >> sys.stderr, snaffles
         snaffle = snaffles[0]
-        if myWizard.state == 1:
-            print "THROW",int(goal.x),int(goal.y),500
-        elif (magic>=5):
-            bludgers = sorted(bludgers, key=lambda snaffle: snaffle.dist(myWizard))
-            print "OBLIVIATE", bludgers[0].id
-            magic -= 5
-        elif (magic>=20):
+        distClosetSnaffle  = snaffle.dist(myWizard)
+        closetBludger = sorted(bludgers, key=lambda bludger: bludger.dist(myWizard))[0]
+        distClosetBludger = closetBludger.dist
+        
+        #FLIPENDO
+        doFLIPENDO = 0
+        if (mana > 20 and distClosetSnaffle < 10000**2 and cd_flipendo == 0):
+            if snaffle.x != myWizard.x:
+                a_line = (snaffle.y - myWizard.y)/(snaffle.x - myWizard.x)
+                b_line = myWizard.y - a_line * myWizard.x
+                if myWizard.team == 0:
+                    x_line = 16000
+                    y_line = a_line*x_line+b_line
+                    if y_line>= 3500 and y_line <= 3900:
+                        if not myWizard.obstacle_intrajectory(a_line, b_line):
+                            print "FLIPENDO ",snaffle._id
+                            cd_flipendo += 3
+                            mana-=20
+                            doFLIPENDO = 1
+                        else:
+                            doFLIPENDO = 0
+                if myWizard.team == 1:
+                    x_line = 0
+                    y_line = a_line*x_line+b_line
+                    if y_line>= 3500 and y_line <= 3900:
+                         if not myWizard.obstacle_intrajectory(a_line, b_line):
+                            print "FLIPENDO ",snaffle._id
+                            cd_flipendo += 3
+                            mana-=20
+                            doFLIPENDO = 1
+                         else:
+                            doFLIPENDO = 0
+        
+        #ACCIO 
+        if (mana>=20 and cd_accio == 0 and doFLIPENDO == 0):
+            best_accio = None
+            dist_snaffle = 10000
+            if myWizard.team == 0:
+                for snaffle in snaffles:
+                    tmp = snaffle.dist(myWizard)
+                    if ((snaffle.x - myWizard.x) < 0 and tmp < 5000**2 and tmp > 2000**2) or best_accio == None:
+                        best_accio = snaffle
+                        dist_snaffle = tmp
+            else:
+                for snaffle in snaffles:
+                    tmp = snaffle.dist(myWizard)
+                    if ((snaffle.x - myWizard.x) > 0 and tmp < 6000**2 and tmp > 2000**2) or best_accio == None:
+                        best_accio = snaffle
+                        dist_snaffle = tmp
+            print "ACCIO", best_accio.id
+            mana -= 20
+            cd_accio += 6
+        
+        #OBLIVIATE
+        # elif (mana>=5 and cd_obliviate == 0 and distClosetBludger < 2000**2 and distClosetBludger > 0 ):
+        #     print "OBLIVIATE", bludgers[0].id
+        #     mana -= 5
+        #     cd_obliviate += 3
             
-            magic-=20
-        elif (magic>=20):
-            magic-=20
+        # #PETRIFICUS 
+        # elif (mana>=10 and cd_petrificus == 0 and distClosetBludger < 700**2 and distClosetBludger > 0 ):
+        #     print "PETRIFICUS", bludgers[0].id
+        #     mana -= 10
+        #     cd_petrificus += 1
+            
+        
+        
+        elif myWizard.state == 1:
+            print "THROW",int(goal.x),int(goal.y),500       
         else:
             print "MOVE",snaffle.x,snaffle.y,100
