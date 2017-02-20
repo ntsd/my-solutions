@@ -1,5 +1,7 @@
 #!/bin/python
 
+#https://www.hackerrank.com/contests/projecteuler/challenges/euler001
+
 def sumOfNaturalNumber(num):
     sum=0
     three=num//3

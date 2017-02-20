@@ -1,6 +1,6 @@
 #!/bin/python3
 
-import sys
+#https://www.hackerrank.com/contests/projecteuler/challenges/euler002
 
 def evenFibonacci(n):
     a=1
