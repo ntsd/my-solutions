@@ -7,7 +7,7 @@ def sumOfNaturalNumber(num):
     three=num//3
     five=num//5
     fifteen=num//15
-    sum+=3*(three*(three+1)//2)
+    sum+=3*(three*(three+1)//2) #3* (n+1)*n/2
     sum+=5*(five*(five+1)//2)
     sum-=15*(fifteen*(fifteen+1)//2)
     return sum
