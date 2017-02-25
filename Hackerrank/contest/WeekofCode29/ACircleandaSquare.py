@@ -58,10 +58,11 @@ x1,y1,x3,y3 = [int(x1),int(y1),int(x3),int(y3)]
 rectX, rectY = (x1+x3)/2, (y1+y3)/2
 dameter = getDistance(x1, y1, x3, y3)
 rRect = dameter/2
-x2, y2, x4, y4 = circle_intersection(x1,y1,rRect,x3,y3,rRect)
+##x2, y2, x4, y4 = circle_intersection(x1,y1,rRect,x3,y3,rRect)
 
 
 print(rectX, rectY, rRect)
+print(x2, y2, x4, y4)
 # your code goes here
 for row in range(h):
     for col in range(w):
@@ -69,8 +70,9 @@ for row in range(h):
         if getDistance(col, row, circleX, circleY) <= rCircle:
             print("#",end="")
         #elif getDistance(col, row, rectX, rectY) <= (rRect-getDistance(col, row, rectX, rectY)):
-        elif getDistance(col, row, rectX, rectY) < rRect or is_between(col, row ,x1,y1 ,x2, y2)\
-             or is_between(col, row ,x1,y1 ,x4, y4) or is_between(col, row ,x3,y3 ,x2, y2) or is_between(col, row ,x3,y3 ,x4, y4):
+        elif col == 12 and row == 14:
+            print("-",end="") 
+        elif getDistance(col, row, rectX, rectY) < rRect:
             print("#",end="")
         else:
             print(".",end="")
