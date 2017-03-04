@@ -10,6 +10,16 @@ def sortDiraction(links, directForm):
             closetDistance = i.distance
     return [closetId, closetDistance]
 
+def getDistanceFromLinks(links, directForm, directTo):
+    for i in links:
+        if i.directForm == directForm and i.directTo == directTo:
+            return distance
+
+def findFactoryFromId(factorys, id):
+    for i in factorys:
+        if i.id == id:
+            return i
+ 
 class Link:
     def __init__(self, diractFrom, directTo, distance):
         self.diractFrom = diractFrom
@@ -25,6 +35,7 @@ class Factory:
         self.player = player
         self.troops = troops
         self.production = production
+        self.troopsInto = 0
     
     def __eq__(self, other):
         return self.id == other.id
@@ -78,8 +89,15 @@ while True:
     
     # To debug: print("Debug messages...", file=sys.stderr)
     for i in opTroops:
+        myClosetId, myClosetDistance = sortDiraction(links, i.directTo)
+        myClosetFactory = findFactoryFromId(myfactorys, myClosetId)
+        distanceFromTroopToTarget = getDistanceFromLinks(links, i.directFrom, i.directTo)
         if i.directTo in naFactorys:
-            if i.remaining < 
+            if i.remaining+distanceFromTroopToTarget < myClosetDistance*2:
+                print("MOVE "+myClosetId+" "+i.directTo+" "+(i.number+1))
         elif i.directTo in myfactorys:
-            
+            if i.remaining+distanceFromTroopToTarget < myClosetDistance*2:
+                print("MOVE "+myClosetId+" "+i.directTo+" "+(i.number+1))
+    for i in naFactorys:
+        pass
     print("WAIT")
