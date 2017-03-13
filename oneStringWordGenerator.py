@@ -12,8 +12,9 @@ def oneStringWordGenerator(string, part):
                 oneString+=c[i]
             except:
                 oneString+=""
-    print("".join(oneString[i::part] for i in range(part)))
+##    print("".join(oneString[i::part] for i in range(part)))
     return oneString
 
-
-print(oneStringWordGenerator("Hello World", 2))
+word = "Hello World"
+part = 2
+assert  oneStringWordGenerator(word, part) == "HWeolrllod  "
