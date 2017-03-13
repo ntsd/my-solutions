@@ -1,7 +1,7 @@
 def oneStringWordGenerator(string, part):
     oneString = ""
     lenght = len(string)
-    string = string+" "*(lenght%part)
+    string = string+" "*((lenght%part)-1)
     lenght+=lenght%part
     charPerPart = lenght//part
     strings=[string[c*charPerPart:c*charPerPart+charPerPart] for c in range(part)]
@@ -17,4 +17,6 @@ def oneStringWordGenerator(string, part):
 
 word = "Hello World"
 part = 2
-assert  oneStringWordGenerator(word, part) == "HWeolrllod  "
+oneString = oneStringWordGenerator(word, part)
+print(oneString)
+print("".join(oneString[i::part] for i in range(part)))
