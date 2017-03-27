@@ -15,7 +15,7 @@ def oneStringWordGenerator(string, part):
 ##    print("".join(oneString[i::part] for i in range(part)))
     return oneString
 
-word = "Hello World"
+word = "HelloWorld"
 part = 2
 oneString = oneStringWordGenerator(word, part)
 print(oneString)
