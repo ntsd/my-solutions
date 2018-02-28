@@ -1,3 +1,2 @@
-numpy==1.13.0rc2+mkl
 pandas==0.19.2
 scikit_learn==0.19.1
