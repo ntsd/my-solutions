@@ -7,19 +7,28 @@ from sklearn.model_selection import cross_val_score
 import numpy as np
 import pandas
 
+from sklearn.feature_extraction.text import CountVectorizer,TfidfTransformer
+
+#Feature Extraction
+count_vect = CountVectorizer(ngram_range = (1,1),max_df = 0.1)
+tfidf_transformer = TfidfTransformer(use_idf=False)    
 transformer=HashingVectorizer(stop_words='english')
 
 #train data
 label_cols = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
 train = pandas.read_csv('train.csv')#, skiprows=range(1, 140000)) #159571 rows x 8 columns
 train_x = train['comment_text']
-train_x = transformer.fit_transform(train_x)
+#train_x = transformer.fit_transform(train_x)
+train_x = count_vect.fit_transform(train_x)	
+train_x = tfidf_transformer.fit_transform(train_x)
 
 #Predict data
 predict_data = pandas.read_csv('test.csv')#, skiprows=range(1, 140000)) #153164 rows x 2 columns
 predict_id = predict_data['id']
 predict_x = predict_data['comment_text']
-predict_x = transformer.fit_transform(predict_x)
+#predict_x = transformer.fit_transform(predict_x)
+predict_x = count_vect.fit_transform(predict_x)	
+predict_x = tfidf_transformer.fit_transform(predict_x)
 
 preds = np.zeros((len(predict_data), len(label_cols)))
 
