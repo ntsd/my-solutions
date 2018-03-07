@@ -88,7 +88,7 @@ batch_size = 128
 epochs = 4
 X_tra, X_val, y_tra, y_val = train_test_split(x_train, y_train, train_size=0.9, random_state=233)
 
-file_path="best.hdf5"
+filepath="best.hdf5"
 checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
 early = EarlyStopping(monitor="val_acc", mode="max", patience=5)
 callbacks_list = [checkpoint, early]
