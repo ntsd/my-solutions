@@ -1,0 +1,1 @@
+https://www.hackerearth.com/challenge/competitive/predict-the-criminal/leaderboard/
