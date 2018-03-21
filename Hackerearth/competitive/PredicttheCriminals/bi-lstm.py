@@ -88,10 +88,10 @@ preds = Dense(1, activation="sigmoid")(x) # len of  output
 model = Model(sequence_input, preds)
 
 
-model.compile(loss='binary_crossentropy',optimizer=Adam(lr=1e-3),metrics=['accuracy', matthews_correlation])
+model.compile(loss='binary_crossentropy',optimizer=Adam(lr=1e-3),metrics=['accuracy'])
 
 batch_size = 128
-epochs = 4
+epochs = 8
 X_tra, X_val, y_tra, y_val = train_test_split(X_train, y_train, train_size=0.9)
 
 filepath="best.hdf5"
