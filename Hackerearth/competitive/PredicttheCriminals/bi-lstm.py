@@ -34,31 +34,41 @@ def matthews_correlation(y_true, y_pred):
 
     return numerator / (denominator + K.epsilon())
 
+cols=['IFATHER', 'NRCH17_2', 'IRHHSIZ2', 'IIHHSIZ2', 'IRKI17_2', 'IIKI17_2', 'IRHH65_2', 'IIHH65_2', 'PRXRETRY',\
+                 'PRXYDATA', 'MEDICARE', 'CAIDCHIP', 'CHAMPUS', 'PRVHLTIN', 'GRPHLTIN', 'HLTINNOS', 'HLCNOTYR', 'HLCNOTMO',\
+                 'HLCLAST', 'HLLOSRSN', 'HLNVCOST', 'HLNVOFFR', 'HLNVREF', 'HLNVNEED', 'HLNVSOR', 'IRMCDCHP', 'IIMCDCHP',\
+                 'IRMEDICR', 'IIMEDICR', 'IRCHMPUS', 'IICHMPUS', 'IRPRVHLT', 'IIPRVHLT', 'IROTHHLT', 'IIOTHHLT', 'HLCALLFG',\
+                 'HLCALL99', 'ANYHLTI2', 'IRINSUR4', 'IIINSUR4', 'OTHINS', 'CELLNOTCL', 'CELLWRKNG', 'IRFAMSOC', 'IIFAMSOC',\
+                 'IRFAMSSI', 'IIFAMSSI', 'IRFSTAMP', 'IIFSTAMP', 'IRFAMPMT', 'IIFAMPMT', 'IRFAMSVC', 'IIFAMSVC', 'IRWELMOS',\
+                 'IIWELMOS', 'IRPINC3', 'IRFAMIN3', 'IIPINC3', 'IIFAMIN3', 'GOVTPROG', 'POVERTY3', 'TOOLONG', 'TROUBUND',\
+                 'PDEN10', 'COUTYP2', 'MAIIN102', 'AIIND102', 'ANALWT_C', 'VESTR', 'VEREP']
+
 train = pd.read_csv('criminal_train.csv')
 test = pd.read_csv('criminal_test.csv')
 
-X_train = train[['IFATHER', 'NRCH17_2', 'IRHHSIZ2', 'IIHHSIZ2', 'IRKI17_2', 'IIKI17_2', 'IRHH65_2', 'IIHH65_2', 'PRXRETRY',\
-                 'PRXYDATA', 'MEDICARE', 'CAIDCHIP', 'CHAMPUS', 'PRVHLTIN', 'GRPHLTIN', 'HLTINNOS', 'HLCNOTYR', 'HLCNOTMO',\
-                 'HLCLAST', 'HLLOSRSN', 'HLNVCOST', 'HLNVOFFR', 'HLNVREF', 'HLNVNEED', 'HLNVSOR', 'IRMCDCHP', 'IIMCDCHP',\
-                 'IRMEDICR', 'IIMEDICR', 'IRCHMPUS', 'IICHMPUS', 'IRPRVHLT', 'IIPRVHLT', 'IROTHHLT', 'IIOTHHLT', 'HLCALLFG',\
-                 'HLCALL99', 'ANYHLTI2', 'IRINSUR4', 'IIINSUR4', 'OTHINS', 'CELLNOTCL', 'CELLWRKNG', 'IRFAMSOC', 'IIFAMSOC',\
-                 'IRFAMSSI', 'IIFAMSSI', 'IRFSTAMP', 'IIFSTAMP', 'IRFAMPMT', 'IIFAMPMT', 'IRFAMSVC', 'IIFAMSVC', 'IRWELMOS',\
-                 'IIWELMOS', 'IRPINC3', 'IRFAMIN3', 'IIPINC3', 'IIFAMIN3', 'GOVTPROG', 'POVERTY3', 'TOOLONG', 'TROUBUND',\
-                 'PDEN10', 'COUTYP2', 'MAIIN102', 'AIIND102', 'ANALWT_C', 'VESTR', 'VEREP']] 
-X_train['POVERTY3'] = [i+1 for i in X_train['POVERTY3']] #POVERTY3 have -1
-X_train['NRCH17_2'] = [i+1 for i in X_train['NRCH17_2']] #POVERTY3 have -1
+# to filter -1 rows
+
+def isnt(*cols):
+    for c in cols:
+        if c==-1:
+            return False
+    return True
+
+def isnt2(*cols):
+    for c in cols:
+        if c==-1:
+            return True
+    return False
+
+train = train[train[cols].apply(lambda x: isnt(*x), axis=1)]
+test_missing = test[test[cols].apply(lambda x: isnt2(*x), axis=1)]
+test = test[test[cols].apply(lambda x: isnt(*x), axis=1)]
+
+X_train = train[cols]
+
 y_train = train["Criminal"]
 
-X_test = test[['IFATHER', 'NRCH17_2', 'IRHHSIZ2', 'IIHHSIZ2', 'IRKI17_2', 'IIKI17_2', 'IRHH65_2', 'IIHH65_2', 'PRXRETRY',\
-                 'PRXYDATA', 'MEDICARE', 'CAIDCHIP', 'CHAMPUS', 'PRVHLTIN', 'GRPHLTIN', 'HLTINNOS', 'HLCNOTYR', 'HLCNOTMO',\
-                 'HLCLAST', 'HLLOSRSN', 'HLNVCOST', 'HLNVOFFR', 'HLNVREF', 'HLNVNEED', 'HLNVSOR', 'IRMCDCHP', 'IIMCDCHP',\
-                 'IRMEDICR', 'IIMEDICR', 'IRCHMPUS', 'IICHMPUS', 'IRPRVHLT', 'IIPRVHLT', 'IROTHHLT', 'IIOTHHLT', 'HLCALLFG',\
-                 'HLCALL99', 'ANYHLTI2', 'IRINSUR4', 'IIINSUR4', 'OTHINS', 'CELLNOTCL', 'CELLWRKNG', 'IRFAMSOC', 'IIFAMSOC',\
-                 'IRFAMSSI', 'IIFAMSSI', 'IRFSTAMP', 'IIFSTAMP', 'IRFAMPMT', 'IIFAMPMT', 'IRFAMSVC', 'IIFAMSVC', 'IRWELMOS',\
-                 'IIWELMOS', 'IRPINC3', 'IRFAMIN3', 'IIPINC3', 'IIFAMIN3', 'GOVTPROG', 'POVERTY3', 'TOOLONG', 'TROUBUND',\
-                 'PDEN10', 'COUTYP2', 'MAIIN102', 'AIIND102', 'ANALWT_C', 'VESTR', 'VEREP']]
-X_test['POVERTY3'] = [i+1 for i in X_test['POVERTY3']]
-X_test['NRCH17_2'] = [i+1 for i in X_test['NRCH17_2']]
+X_test = test[cols]
 
 max_features=200000 # max value of data
 maxlen=70 # len of input
@@ -92,9 +102,9 @@ callbacks_list = [checkpoint, early]
 model.fit(X_tra, y_tra, batch_size=batch_size, epochs=epochs, validation_data=(X_val, y_val),callbacks = callbacks_list,verbose=1)
 #Loading model weights
 model.load_weights(filepath)
-y_pred = model.predict(x_test,batch_size=1024,verbose=1)
+y_pred = model.predict(X_test,batch_size=1024,verbose=1)
 
 submission = pd.DataFrame()
-submission['PERID'] = test['PERID']
-submission['Criminal'] = y_pred
+submission['PERID'] = pd.concat([test['PERID'], test_missing['PERID']])
+submission['Criminal'] = np.append(y_pred, np.array([0 for _ in range(len(test_missing))]))
 submission.to_csv('bi-lstm.csv', index=False)
