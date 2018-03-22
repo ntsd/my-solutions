@@ -29,8 +29,8 @@ y_train = train[["toxic", "severe_toxic", "obscene", "threat", "insult", "identi
 X_test = test["comment_text"].fillna("fillna").values
 
 
-max_features = 30000
-maxlen = 100
+max_features = 100000
+maxlen = 200
 embed_size = 300
 
 tokenizer = text.Tokenizer(num_words=max_features)
@@ -88,7 +88,7 @@ model = get_model()
 
 
 batch_size = 32
-epochs = 2
+epochs = 8
 
 X_tra, X_val, y_tra, y_val = train_test_split(x_train, y_train, train_size=0.95, random_state=233)
 RocAuc = RocAucEvaluation(validation_data=(X_val, y_val), interval=1)
@@ -99,4 +99,4 @@ hist = model.fit(X_tra, y_tra, batch_size=batch_size, epochs=epochs, validation_
 
 y_pred = model.predict(x_test, batch_size=1024)
 submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_pred
-submission.to_csv('gru.csv', index=False)
+submission.to_csv('pool-gru-fasttext.csv', index=False)
