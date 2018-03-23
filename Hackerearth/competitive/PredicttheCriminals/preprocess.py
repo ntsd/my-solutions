@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 cols=['IFATHER', 'NRCH17_2', 'IRHHSIZ2', 'IIHHSIZ2', 'IRKI17_2', 'IIKI17_2', 'IRHH65_2', 'IIHH65_2', 'PRXRETRY',\
                  'PRXYDATA', 'MEDICARE', 'CAIDCHIP', 'CHAMPUS', 'PRVHLTIN', 'GRPHLTIN', 'HLTINNOS', 'HLCNOTYR', 'HLCNOTMO',\
@@ -18,8 +19,8 @@ def missing(*cols):
 def preprocessing(data):
     data = data[data[cols].apply(lambda x: missing(*x), axis=1)]
     # POVERTY3 and NRCH17_2 can be -1
-    data['POVERTY3'].map(lambda x:x+1) # = [i+1 for i in data['POVERTY3']]
-    data['NRCH17_2'].map(lambda x:x+1)# = [i+1 for i in data['NRCH17_2']]
+    data['POVERTY3']=data['POVERTY3'].map(lambda x:x+1) # = [i+1 for i in data['POVERTY3']]
+    data['NRCH17_2']=data['NRCH17_2'].map(lambda x:x+1)# = [i+1 for i in data['NRCH17_2']]
     return data
 
 if __name__ == '__main__':

@@ -16,6 +16,8 @@ from sklearn.metrics import accuracy_score
 
 import keras.backend as K
 
+from preprocess import preprocessing 
+
 def matthews_correlation(y_true, y_pred):
     y_pred_pos = K.round(K.clip(y_pred, 0, 1))
     y_pred_neg = 1 - y_pred_pos
@@ -60,15 +62,18 @@ def isnt2(*cols):
             return True
     return False
 
-train = train[train[cols].apply(lambda x: isnt(*x), axis=1)]
-test_missing = test[test[cols].apply(lambda x: isnt2(*x), axis=1)]
-test = test[test[cols].apply(lambda x: isnt(*x), axis=1)]
+##train = train[train[cols].apply(lambda x: isnt(*x), axis=1)]
+##test_missing = test[test[cols].apply(lambda x: isnt2(*x), axis=1)]
+##test = test[test[cols].apply(lambda x: isnt(*x), axis=1)]
 
-X_train = train[cols]
+train = preprocessing(train)
+test = preprocessing(test)
 
-y_train = train["Criminal"]
+X_train = train[cols].values
 
-X_test = test[cols]
+y_train = train["Criminal"].values
+
+X_test = test[cols].values
 
 max_features=200000 # max value of data
 maxlen=70 # len of input
@@ -105,6 +110,6 @@ model.load_weights(filepath)
 y_pred = model.predict(X_test,batch_size=1024,verbose=1)
 
 submission = pd.DataFrame()
-submission['PERID'] = pd.concat([test['PERID'], test_missing['PERID']])
-submission['Criminal'] = np.append(y_pred, np.array([0 for _ in range(len(test_missing))]))
+submission['PERID'] = test['PERID']
+submission['Criminal'] = y_pred
 submission.to_csv('bi-lstm.csv', index=False)
