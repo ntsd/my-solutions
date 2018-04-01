@@ -45,6 +45,9 @@ cols=['IFATHER', 'NRCH17_2', 'IRHHSIZ2', 'IIHHSIZ2', 'IRKI17_2', 'IIKI17_2', 'IR
                  'IIWELMOS', 'IRPINC3', 'IRFAMIN3', 'IIPINC3', 'IIFAMIN3', 'GOVTPROG', 'POVERTY3', 'TOOLONG', 'TROUBUND',\
                  'PDEN10', 'COUTYP2', 'MAIIN102', 'AIIND102', 'ANALWT_C', 'VESTR', 'VEREP']
 
+cols=['PRXRETRY', 'IICHMPUS', 'IRMEDICR', 'IIFAMSVC', 'IRKI17_2', 'POVERTY3', 'IFATHER', 'COUTYP2', 'IRHHSIZ2', 'CHAMPUS', 'IRFAMIN3', 'IRINSUR4', 'HLCALL99', 'HLCNOTMO', 'CELLNOTCL', 'IIWELMOS', 'IRWELMOS', 'PRVHLTIN', 'IRPRVHLT', 'CELLWRKNG', 'IIFAMPMT', 'IIFAMSSI', 'PDEN10', 'IRFAMSVC', 'IRPINC3', 'OTHINS', 'HLNVOFFR', 'IIPINC3', 'IRFAMSOC', 'IRFAMPMT', 'IIKI17_2', 'IRFSTAMP', 'IIFAMIN3', 'IRHH65_2', 'HLCALLFG', 'HLCLAST', 'TROUBUND', 'IRFAMSSI', 'GRPHLTIN', 'IIFSTAMP', 'ANYHLTI2', 'IRCHMPUS', 'GOVTPROG', 'IROTHHLT', 'IIFAMSOC', 'IIMEDICR', 'ANALWT_C', 'MEDICARE', 'VESTR', 'IIOTHHLT', 'HLTINNOS', 'PRXYDATA', 'IIHH65_2', 'HLCNOTYR', 'IIMCDCHP', 'AIIND102', 'VEREP', 'NRCH17_2', 'TOOLONG', 'IIPRVHLT', 'CAIDCHIP', 'HLLOSRSN', 'MAIIN102', 'IRMCDCHP']
+
+
 train = pd.read_csv('criminal_train.csv')
 test = pd.read_csv('criminal_test.csv')
 
@@ -76,7 +79,7 @@ y_train = train["Criminal"].values
 X_test = test[cols].values
 
 max_features=200000 # max value of data
-maxlen=70 # len of input
+maxlen=len(cols)#70 # len of input
 embed_size=300
 
 sequence_input = Input(shape=(maxlen, ))
