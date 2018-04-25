@@ -3,4 +3,8 @@
 
 *.csv
 
+*.hdf5
+
+*.csv
+
 *.zip

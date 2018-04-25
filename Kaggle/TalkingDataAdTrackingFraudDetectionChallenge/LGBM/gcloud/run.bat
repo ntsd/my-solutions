@@ -14,5 +14,5 @@ gcloud ml-engine jobs submit training %JOB_NAME% ^
 --package-path ./trainer ^
 --region %REGION% ^
 -- ^
---train-file gs://%BUCKET_NAME%/kaggle/TalkingDataAdTracking/input/train.pkl ^
---test-file gs://%BUCKET_NAME%/kaggle/TalkingDataAdTracking/input/test.pkl
+--train-file gs://%BUCKET_NAME%/kaggle/TalkingDataAdTracking/input/train.csv ^
+--test-file gs://%BUCKET_NAME%/kaggle/TalkingDataAdTracking/input/test.csv

@@ -238,6 +238,7 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
             }
 
     print('loading train data...',frm,to)
+    train_df = read_data(job_dir+"../input/train.csv", parse_dates=['click_time'], skiprows=range(1,frm), nrows=to-frm, dtype=dtypes, usecols=['ip','app','device','os', 'channel', 'click_time', 'is_attributed'])
     #train_df = read_data(job_dir+"../input/train.csv", parse_dates=['click_time'], skiprows=range(1,frm), nrows=to-frm, dtype=dtypes, usecols=['ip','app','device','os', 'channel', 'click_time', 'is_attributed'])
     # Reading in the pickle file. Pickle works differently with Python 2 vs 3
 ##    f = file_io.FileIO(train_file, mode='rb')
@@ -252,6 +253,7 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
 ##        test_df = pickle.load(f)
 ##    else:
 ##        test_df = pickle.load(f, encoding='bytes')
+    test_df = read_data("../input/test.csv", parse_dates=['click_time'], dtype=dtypes, usecols=['ip','app','device','os', 'channel', 'click_time', 'click_id'])
     #if debug:
     #    test_df = pd.read_csv("../input/test.csv", nrows=100000, parse_dates=['click_time'], dtype=dtypes, usecols=['ip','app','device','os', 'channel', 'click_time', 'click_id'])
     #else:
