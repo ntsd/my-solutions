@@ -1,0 +1,80 @@
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>SET datetime=04242018_144534 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>call set datetime=04242018_144534 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set BUCKET_NAME=ntsd-bucket 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_NAME="talkine_data_lstm_04242018_144534" 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_DIR=gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set REGION=asia-east1 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set CONFIG=config.yaml 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>gcloud ml-engine jobs submit training "talkine_data_lstm_04242018_144534" \ 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>SET datetime=04242018_144718 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>call set datetime=04242018_144718 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set BUCKET_NAME=ntsd-bucket 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_NAME="talkine_data_lstm_04242018_144718" 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_DIR=gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set REGION=asia-east1 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set CONFIG=config.yaml 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>gcloud ml-engine jobs submit training "talkine_data_lstm_04242018_144718" \ 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>SET datetime=04242018_144853 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>call set datetime=04242018_144853 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set BUCKET_NAME=ntsd-bucket 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_NAME="talkine_data_lstm_04242018_144853" 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_DIR=gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set REGION=asia-east1 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set CONFIG=config.yaml 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>gcloud ml-engine jobs submit training "talkine_data_lstm_04242018_144853" --job-dir gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm --runtime-version 1.0 --config config.yaml --module-name trainer.talkingdata_lstm --package-path ./trainer --region asia-east1 -- --train-file gs://ntsd-bucket/kaggle/TalkingDataAdTracking/input/train.csv 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>SET datetime=04242018_150154 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>call set datetime=04242018_150154 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set BUCKET_NAME=ntsd-bucket 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_NAME="talkine_data_lstm_04242018_150154" 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_DIR=gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set REGION=asia-east1 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set CONFIG=config.yaml 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>gcloud ml-engine jobs submit training "talkine_data_lstm_04242018_150154" --job-dir gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm --runtime-version 1.0 --config config.yaml --module-name trainer.talkingdata_lstm --package-path ./trainer --region asia-east1 -- --train-file gs://ntsd-bucket/kaggle/TalkingDataAdTracking/input/train.csv > 1>gcloud.log 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>SET datetime=04242018_150247 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>call set datetime=04242018_150247 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set BUCKET_NAME=ntsd-bucket 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_NAME="talkine_data_lstm_04242018_150247" 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set JOB_DIR=gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set REGION=asia-east1 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>set CONFIG=config.yaml 
+
+C:\Users\Jiravat\Desktop\git\My-Solution\Kaggle\TalkingDataAdTrackingFraudDetectionChallenge\LGBM\gcloud>gcloud ml-engine jobs submit training "talkine_data_lstm_04242018_150247" --job-dir gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm --runtime-version 1.0 --config config.yaml --module-name trainer.talkingdata_lstm --package-path ./trainer --region asia-east1 -- --train-file gs://ntsd-bucket/kaggle/TalkingDataAdTracking/input/train.csv  1>>gcloud.log 

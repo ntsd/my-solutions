@@ -1,0 +1,10 @@
+trainingInput:
+#  scaleTier: BASIC
+  scaleTier: CUSTOM
+  masterType: complex_model_l_gpu
+  workerType: complex_model_l_gpu
+  parameterServerType: large_model
+  workerCount: 1
+  parameterServerCount: 3
+  region: asia-east1
+  pythonVersion: '3.5'

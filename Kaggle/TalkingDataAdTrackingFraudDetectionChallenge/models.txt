@@ -1,0 +1,8 @@
+train 80M
+val 30M
+
+LightGBM https://www.kaggle.com/bk0000/non-blending-lightgbm-model-lb-0-977 .977
+wordbatch https://www.kaggle.com/anttip/talkingdata-wordbatch-fm-ftrl-lb-0-9752 .9752
+Keras https://www.kaggle.com/aharless/new-talkingdata-gpu-example-with-multiple-runs .9695
+
+linear stacking https://www.kaggle.com/aharless/simple-linear-stacking-lb-9730?scriptVersionId=3132064/notebook
