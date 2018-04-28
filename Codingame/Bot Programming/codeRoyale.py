@@ -1,13 +1,29 @@
 import sys
 import math
 
+# 1. set site type
+# 2. set priority need 
+# 3 if opponent create unit build tower 
+# 4 
+
+# predict op_unit to my_qreen
+# predict my_unit to op_qreen
+
+#seed=974861136
+
+def simulate_op_knight(op_unit, my_queen, site):#check op knight attack our queen
+    pass
+
+def simulate_my_knight(op_unit, my_queen, site):# find how many knight to build to attack op queen
+    pass
+
 class Site:
     def __init__(self, site_id, x, y, radius):
         self.site_id = site_id
         self.x = x
         self.y = y
         self.radius = radius
-        self.predict_structure_type = []
+        self.predict_structure_type = ""
         
     def setAtt(self, gold_remain, maxMineSize, structure_type, owner, param1, param2):
         self.gold_remain = gold_remain
@@ -18,7 +34,7 @@ class Site:
         self.param2 = param2
     
     def setPredictStructure(self, structure_type):
-        self.predict_structure_type.append(structure_type)
+        self.predict_structure_type = structure_type
         
     
 class Unit:
@@ -29,64 +45,59 @@ class Unit:
 def dis(gun, target):
     return math.sqrt((target.y-gun.y)**2+(target.x-gun.x)**2)
 
+def dis2(x, y, x2, y2):
+    return math.sqrt((y2-y)**2+(x2-x)**2)
+
 #enum
 class enum_structure_type():
     none=-1
     mine=0
     tower=1
     barrack=2
+    
+def in_op_tower_range(obj, site):
+    return any(sites[site].owner==1 \
+    and sites[site].structure_type==enum_structure_type.tower and\
+    sites[site].param2 > dis(obj,sites[site])\
+    for site in sites)
 
 def build():
-    #print(sites.items())
+    #print(sites.items()) https://www.codingame.com/replay/305446280
     global knight_build
     global archer_build
     global giant_build
-    sorted_closet_site = sorted(sites, key=lambda x: dis(my_queen, sites[x]))
-    lowest_hp_tower = None
-    lowest_hp_tower_num = float('inf')
+    global tower_build
+    global mine_build
     
-    #run away from op creeps
-    run_mode = 0
-    for creep in op_creeps:
-        if dis(my_queen, creep) < 100:
-            run_mode=1
-
+    #check not in range of op tower
+    # if in_op_tower_range(my_queen, sites):
+    #     print('MOVE', start_pos[0], start_pos[1])
+    #     return
+    
+    need='TOWER'
+    if mine_build < 1:
+        need='MINE'
+    elif tower_build < 4:
+        need='TOWER'
+    elif mine_build < 5:
+        need='MINE'
+    elif tower_build < 5:
+        need='TOWER'
+    #print(loop, file=sys.stderr)
+    if loop>170:
+        sorted_closet_site = sorted(sites, key=lambda x: dis(my_queen, sites[x]))
+        for site in sorted_closet_site:
+            this_site = sites[site]
+            if this_site.predict_structure_type == enum_structure_type.mine\
+            and this_site.structure_type != enum_structure_type.barrack:
+                print("BUILD {} {}".format(site, 'BARRACKS-KNIGHT'))
+                return
+    
+    sorted_closet_site = sorted(sites, key=lambda x: dis(my_queen, sites[x]))
     for site in sorted_closet_site:
         this_site = sites[site]
-        if this_site.structure_type == -1:
-            if mine_build < 1 and this_site.gold_remain > 0 :
-                print("BUILD {} {}".format(site, 'MINE'))
-                return
-            if knight_build < 1:
-                print("BUILD {} BARRACKS-{}".format(site, 'KNIGHT'))
-                return
-            if tower_build < 2:
-                print("BUILD {} {}".format(site, 'TOWER'))
-                return
-            if mine_build < 2 and this_site.gold_remain > 0 :
-                print("BUILD {} {}".format(site, 'MINE'))
-                return
-            if tower_build < 3:
-                print("BUILD {} {}".format(site, 'TOWER'))
-                return
-            if mine_build < 5 and this_site.gold_remain > 0 :
-                print("BUILD {} {}".format(site, 'MINE'))
-                return
-            if tower_build < 5:
-                print("BUILD {} {}".format(site, 'TOWER'))
-                return
-            print("BUILD {} {}".format(site, 'TOWER'))
-            return
-            # if archer_build==0:
-            #     print("BUILD {} BARRACKS-{}".format(site, 'ARCHER'))
-            #     return
-            # if giant_build==0:
-            #     print("BUILD {} BARRACKS-{}".format(site, 'GIANT'))
-            #     return
-            # if dis(my_queen, this_site) < 300 or run_mode == 0:
-            #     print("BUILD {} {}".format(site, 'TOWER'))
-            #     return
-        #print(this_site.param1,this_site.maxMineSize, this_site.structure_type,enum_structure_type.mine ,file=sys.stderr)
+        if in_op_tower_range(this_site, sites):
+            continue
         if this_site.owner==0:
             if this_site.structure_type == enum_structure_type.mine:
                 if this_site.param1 < this_site.maxMineSize:
@@ -94,19 +105,26 @@ def build():
                     return
                 
             if this_site.structure_type == enum_structure_type.tower:
-                if mine_build < 5 and this_site.gold_remain > 0 and tower_build > 4:
-                    print("BUILD {} {}".format(site, 'MINE'))
+                if this_site.param1 < 700:#700
+                    print("BUILD {} {}".format(site, 'TOWER'))
                     return
-                if this_site.param1 < 500:
+        if this_site.owner==-1:
+            if need == 'MINE':
+                if this_site.predict_structure_type == enum_structure_type.mine:
+                    if this_site.gold_remain > 0:
+                        print("BUILD {} {}".format(site, 'MINE'))
+                        return
+                    else:
+                        print("BUILD {} {}".format(site, 'BARRACKS-KNIGHT'))
+                        return
+            if need == 'TOWER':
+                if this_site.predict_structure_type == enum_structure_type.tower:
                     print("BUILD {} {}".format(site, 'TOWER'))
                     return
         
-        if this_site.owner==0 and this_site.structure_type == enum_structure_type.tower and this_site.param1 < lowest_hp_tower_num:
-            lowest_hp_tower=this_site
-            lowest_hp_tower_num=this_site.param1
-    #run
     
-    print('MOVE', lowest_hp_tower.x, lowest_hp_tower.y)
+    #run
+    print('MOVE', start_pos[0], start_pos[1])
     
 def train():
     global gold
@@ -140,8 +158,9 @@ knight_build=0
 archer_build=0
 giant_build=0
 tower_build=0
-op_creeps=[]
 mine_build = 0
+op_creeps=[]
+start_pos=(0,0)
 
 loop=0
 while True:
@@ -152,6 +171,9 @@ while True:
     giant_build=0
     tower_build=0
     mine_build = 0
+    
+    
+    
     for i in range(num_sites):
         # ignore_1: used in future leagues
         # ignore_2: used in future leagues
@@ -189,23 +211,19 @@ while True:
     
     
     if loop==0:#set predict structure
-        sorted_closet_site = sorted(sites, key=lambda x: dis(my_queen, sites[x]))
+        sorted_closet_site = sorted(sites, key=lambda x: dis2(my_queen.x, my_queen.x, sites[x].x, my_queen.y))# dis2(my_queen.x, 500, sites[x].x, sites[x].y))
         predict_mine=0
         predict_knight=0
         predict_tower=0
+        start_pos = (my_queen.x, my_queen.y)
+        
         for site in sorted_closet_site:
             this_site = sites[site]
-            if predict_mine<3:
-                this_site.setPredictStructure('MINE')
-                this_site.setPredictStructure('TOWER')
+            if predict_mine<5:
+                this_site.setPredictStructure(enum_structure_type.mine)
                 predict_mine+=1
                 continue
-            if predict_knight<1:
-                this_site.setPredictStructure('KNIGHT')
-                predict_knight+=1
-                continue
-            this_site.setPredictStructure('TOWER')
-            this_site.setPredictStructure('MINE')
+            this_site.setPredictStructure(enum_structure_type.tower)
     build()
     train()
     loop+=1
