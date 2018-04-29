@@ -11,10 +11,12 @@ import math
 
 #seed=974861136
 
-def simulate_op_knight(op_unit, my_queen, site):#check op knight attack our queen
+def simulate_op_knight(op_unit, my_queen, my_tower, site):#check op knight attack our queen
+    # towards((enemyQueen.location + (location - enemyQueen.location).resizedTo(3.0)), speed.toDouble() * frames)
     pass
-
-def simulate_my_knight(op_unit, my_queen, site):# find how many knight to build to attack op queen
+        
+    
+def simulate_my_knight(my_unit, op_queen, my_knight_build):# find how many knight to build to attack op queen
     pass
 
 class Site:
@@ -77,6 +79,8 @@ def build():
     need='TOWER'
     if mine_build < 1:
         need='MINE'
+    elif knight_build < 1:
+        need='BARRACKS-KNIGHT'
     elif tower_build < 4:
         need='TOWER'
     elif mine_build < 5:
@@ -84,7 +88,7 @@ def build():
     elif tower_build < 5:
         need='TOWER'
     #print(loop, file=sys.stderr)
-    if loop>170:
+    if loop>150:
         sorted_closet_site = sorted(sites, key=lambda x: dis(my_queen, sites[x]))
         for site in sorted_closet_site:
             this_site = sites[site]
@@ -109,6 +113,10 @@ def build():
                     print("BUILD {} {}".format(site, 'TOWER'))
                     return
         if this_site.owner==-1:
+            if need == 'BARRACKS-KNIGHT':
+                if this_site.predict_structure_type == enum_structure_type.tower:
+                    print("BUILD {} {}".format(site, 'BARRACKS-KNIGHT'))
+                    return
             if need == 'MINE':
                 if this_site.predict_structure_type == enum_structure_type.mine:
                     if this_site.gold_remain > 0:
@@ -129,6 +137,9 @@ def build():
 def train():
     global gold
     id_to_train = []
+    if loop>60 and loop<150:
+        print('TRAIN')
+        return
     for site in sites:
         if sites[site].owner == 0:
             if sites[site].structure_type == 2 and sites[site].param2==0 and gold>=80 and 1:
@@ -158,9 +169,16 @@ knight_build=0
 archer_build=0
 giant_build=0
 tower_build=0
-mine_build = 0
-op_creeps=[]
+mine_build=0
 start_pos=(0,0)
+
+my_tower=[]
+my_knight_build=[]
+my_mine_build=[]
+op_tower=[]
+op_knight_build=[]
+
+op_creeps=[]
 
 loop=0
 while True:
@@ -170,10 +188,14 @@ while True:
     archer_build=0
     giant_build=0
     tower_build=0
-    mine_build = 0
+    mine_build=0
     
     
-    
+    my_tower=[]
+    my_knight_build=[]
+    my_mine_build=[]
+    op_tower=[]
+    op_knight_build=[]
     for i in range(num_sites):
         # ignore_1: used in future leagues
         # ignore_2: used in future leagues
@@ -184,16 +206,21 @@ while True:
         #creep type: 0 for KNIGHT, 1 for ARCHER, 2 for GIANT
         if param2 == 0 and owner==0:
             knight_build+=1
+            my_knight_build.append(sites[site_id])
+        if param2 == 0 and owner==1:
+            op_knight_build.append(sites[site_id])
         if structure_type==enum_structure_type.mine and owner==0:
             mine_build+=1
-        archer_build+=1
-        giant_build+=1
+            my_mine_build.append(sites[site_id])
         if param2 == 1 and owner==0:
             archer_build+=1
         if param2 == 2 and owner==0:
             giant_build+=1
         if structure_type == enum_structure_type.tower and owner==0:
             tower_build+=1
+            my_tower.append(sites[site_id])
+        if structure_type == enum_structure_type.tower and owner==1:
+            op_tower.append(sites[site_id])
         
     num_units = int(input())
     
@@ -219,7 +246,7 @@ while True:
         
         for site in sorted_closet_site:
             this_site = sites[site]
-            if predict_mine<5:
+            if predict_mine<4:
                 this_site.setPredictStructure(enum_structure_type.mine)
                 predict_mine+=1
                 continue
