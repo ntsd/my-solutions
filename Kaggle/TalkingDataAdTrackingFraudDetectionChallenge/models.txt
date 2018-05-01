@@ -1,4 +1,4 @@
-train 80M
+train 150M
 val 30M
 
 LightGBM https://www.kaggle.com/bk0000/non-blending-lightgbm-model-lb-0-977 .977
