@@ -308,7 +308,7 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
     gc.collect()
 
     print("Training...")
-    #start_time = time.time()
+    start_time = time.time()
 
     params = {
         'learning_rate': 0.20,
@@ -335,7 +335,7 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
                             num_boost_round=1000, 
                             categorical_features=categorical)
 
-    #print('[{}]: model training time'.format(time.time() - start_time))
+    print('[{}]: model training time'.format(time.time() - start_time))
     del train_df
     del val_df
     gc.collect()
@@ -365,8 +365,8 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
 
 if __name__ == '__main__':
     nrows=184903891-1
-    nchunk=184900000#80000000
-    val_size=14900000#2500000
+    nchunk=140000000#80000000
+    val_size=10000000#2500000
 
     frm=nrows-nchunk
 
