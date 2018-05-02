@@ -1,5 +1,7 @@
 import sys
 
+sys.path.insert(0, '../wordbatch/wordbatch-134/wordbatch/')
+sys.path.insert(0, '../wordbatch/randomstate/randomstate/')
 import wordbatch
 from wordbatch.extractors import WordHash
 from wordbatch.models import FM_FTRL
@@ -15,7 +17,7 @@ from contextlib import contextmanager
 def timer(name):
 	t0 = time.time()
 	yield
-	print(f'[{name}] done in {time.time() - t0:.0f} s')
+	print("[{}] done in {} s".format(name, time.time() - t0))
 
 import os, psutil
 def cpuStats():
