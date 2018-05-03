@@ -1,0 +1,9 @@
+trainingInput:
+#  https://cloud.google.com/ml-engine/docs/tensorflow/training-overview
+  scaleTier: CUSTOM #BASIC
+  masterType: large_model #complex_model_l_gpu #large_model #complex_model_l
+  workerType: large_model #complex_model_l_gpu #large_model #complex_model_l
+  parameterServerType: large_model #complex_model_l_gpu #large_model
+  workerCount: 1
+  parameterServerCount: 1
+  pythonVersion: '3.5'
