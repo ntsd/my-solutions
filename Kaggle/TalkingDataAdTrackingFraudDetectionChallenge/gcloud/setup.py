@@ -3,11 +3,11 @@ from setuptools import setup, find_packages
 
 REQUIRED_PACKAGES = ['pandas>=0.22.0','lightgbm'] # keras, h5py
 
-setup(name='talkingdata_lstm',
+setup(name='talkingdata_lgbm',
       version='1.0',
       packages=find_packages(),
       include_package_data=True,
-      description='talkingdata_lstm for Kaggle compret',
+      description='talkingdata_lgbm for Kaggle compret',
       author='Jirawat Boonkumnerd',
       author_email='jo06942@gmail.com',
       license='MIT',

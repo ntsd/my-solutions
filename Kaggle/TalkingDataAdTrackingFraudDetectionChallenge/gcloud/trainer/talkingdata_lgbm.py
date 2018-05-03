@@ -6,7 +6,7 @@ Added some new features. Ran for 25mil chunk rows.
 Also taken ideas from various public kernels.
 """
 
-FILENO=3 #To distinguish the output file name.
+FILENO=5 #To distinguish the output file name.
 debug=0  #Whethere or not in debuging mode
 
 import pandas as pd
@@ -27,16 +27,9 @@ import sys
     ### Taken help from https://www.kaggle.com/nanomathias/feature-engineering-importance-testing
     ###Did some Cosmetic changes 
 predictors=[]
-def do_next_prev_Click( df,agg_suffix, agg_type='float32'):
-    print('Extracting new features...')
-    df['hour'] = pd.to_datetime(df.click_time).dt.hour.astype('int8')
-    df['day'] = pd.to_datetime(df.click_time).dt.day.astype('int8')
+
+def do_next_Click( df,agg_suffix='nextClick', agg_type='float32'):
     
-    #### New added
-    df['minute'] = pd.to_datetime(df.click_time).dt.minute.astype('int8')
-    predictors.append('minute')
-    df['second'] = pd.to_datetime(df.click_time).dt.second.astype('int8')
-    predictors.append('second')
     #print(f">> \nExtracting {agg_suffix} time calculation features...\n")
     
     GROUP_BY_NEXT_CLICKS = [
@@ -64,19 +57,51 @@ def do_next_prev_Click( df,agg_suffix, agg_type='float32'):
 
         # Run calculation
         #print(f">> Grouping by {spec['groupby']}, and saving time to {agg_suffix} in: {new_feature}")
-        if agg_suffix=="nextClick":
-            df[new_feature] = (df[all_features].groupby(spec[
+        df[new_feature] = (df[all_features].groupby(spec[
             'groupby']).click_time.shift(-1) - df.click_time).dt.seconds.astype(agg_type)
-        elif agg_suffix== "prevClick":
-            df[new_feature] = (df.click_time - df[all_features].groupby(spec[
-                'groupby']).click_time.shift(+1) ).dt.seconds.astype(agg_type)
+        
         predictors.append(new_feature)
         gc.collect()
-#         print('predictors',predictors)
     return (df)
 
-def do_count( df, group_cols, agg_type='uint16', show_max=False, show_agg=True ):
-    agg_name='{}count'.format('_'.join(group_cols))  
+def do_prev_Click( df,agg_suffix='prevClick', agg_type='float32'):
+
+    #print(f">> \nExtracting {agg_suffix} time calculation features...\n")
+    
+    GROUP_BY_NEXT_CLICKS = [
+    
+    # V1
+    # {'groupby': ['ip']},
+    # {'groupby': ['ip', 'app']},
+    {'groupby': ['ip', 'channel']},
+    {'groupby': ['ip', 'os']},
+    
+    # V3
+    #{'groupby': ['ip', 'app', 'device', 'os', 'channel']},
+    #{'groupby': ['ip', 'os', 'device']},
+    #{'groupby': ['ip', 'os', 'device', 'app']}
+    ]
+
+    # Calculate the time to next click for each group
+    for spec in GROUP_BY_NEXT_CLICKS:
+    
+       # Name of new feature
+        new_feature = '{}_{}'.format('_'.join(spec['groupby']),agg_suffix)    
+    
+        # Unique list of features to select
+        all_features = spec['groupby'] + ['click_time']
+
+        # Run calculation
+        #print(f">> Grouping by {spec['groupby']}, and saving time to {agg_suffix} in: {new_feature}")
+        df[new_feature] = (df.click_time - df[all_features].groupby(spec[
+                'groupby']).click_time.shift(+1) ).dt.seconds.astype(agg_type)
+        
+        predictors.append(new_feature)
+        gc.collect()
+    return (df)    
+
+def do_count( df, group_cols, agg_type='uint32', show_max=False, show_agg=True ):
+    agg_name='{}_count'.format('_'.join(group_cols))  
     if show_agg:
         print( "\nAggregating by ", group_cols ,  '... and saved in', agg_name )
     gp = df[group_cols][group_cols].groupby(group_cols).size().rename(agg_name).to_frame().reset_index()
@@ -90,7 +115,7 @@ def do_count( df, group_cols, agg_type='uint16', show_max=False, show_agg=True )
     gc.collect()
     return( df )
 
-def do_countuniq( df, group_cols, counted, agg_type='uint8', show_max=False, show_agg=True ):
+def do_countuniq( df, group_cols, counted, agg_type='uint32', show_max=False, show_agg=True ):
     agg_name= '{}_by_{}_countuniq'.format(('_'.join(group_cols)),(counted))  
     if show_agg:
         print( "\nCounting unqiue ", counted, " by ", group_cols ,  '... and saved in', agg_name )
@@ -151,11 +176,9 @@ def do_var( df, group_cols, counted, agg_type='float16', show_max=False, show_ag
     return( df )
 
 ###  A function is written to train the lightGBM model with different given parameters
-if debug:
-    print('*** debug parameter set: this is a test run for debugging purposes ***')
     
 def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', objective='binary', metrics='auc',
-                 feval=None, early_stopping_rounds=30, num_boost_round=3000, verbose_eval=10, categorical_features=None):
+                 feval=None, early_stopping_rounds=50, num_boost_round=3000, verbose_eval=10, categorical_features=None):
     lgb_params = {
         'boosting_type': 'gbdt',
         'objective': objective,
@@ -190,13 +213,16 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', objec
                           feature_name=predictors,
                           categorical_feature=categorical_features
                           )
+    del dtrain
+    del dvalid
+    gc.collect()
 
     evals_results = {}
 
     bst1 = lgb.train(lgb_params, 
                      xgtrain, 
-                     valid_sets=[xgtrain, xgvalid], 
-                     valid_names=['train','valid'], 
+                     valid_sets=[ xgvalid], 
+                     valid_names=['valid'], 
                      evals_result=evals_results, 
                      num_boost_round=num_boost_round,
                      early_stopping_rounds=early_stopping_rounds,
@@ -224,14 +250,14 @@ def read_data(gcs_path, **args):# use this function instead pandas read csv in g
    #print(data.head())
    return data
 
-def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/input/train.pkl',
-               test_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/input/test.pkl',
-                job_dir='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/lstm', **args):
+def DO(frm,to,fileno,train_file='gs://ntsd-bucket-us-central1/kaggle/TalkingDataAdTracking/input/train.pkl',
+               test_file='gs://ntsd-bucket-us-central1/kaggle/TalkingDataAdTracking/input/test.pkl',
+                job_dir='gs://ntsd-bucket-us-central1/kaggle/TalkingDataAdTracking/lgbm', **args):
     dtypes = {
             'ip'            : 'uint32',
             'app'           : 'uint16',
             'device'        : 'uint8',
-            'os'            : 'uint8',
+            'os'            : 'uint16',
             'channel'       : 'uint16',
             'is_attributed' : 'uint8',
             'click_id'      : 'uint32',
@@ -243,7 +269,7 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
     # Reading in the pickle file. Pickle works differently with Python 2 vs 3
 ##    train_f = file_io.FileIO(train_file, mode='r')
 ##    pandas.read_pickle(train_f)
-    
+
     print('loading test data...')
 ##    test_f = file_io.FileIO(test_file, mode='r')
 ##    pandas.read_pickle(test_f)
@@ -253,21 +279,20 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
     #else:
     #    test_df = pd.read_csv("../input/test.csv", parse_dates=['click_time'], dtype=dtypes, usecols=['ip','app','device','os', 'channel', 'click_time', 'click_id'])
 
-    
-    
     len_train = len(train_df)
     train_df=train_df.append(test_df)
-    
-    del test_df    
+
+    del test_df
     gc.collect()
+
+    #add more feature
+    train_df['hour'] = pd.to_datetime(train_df.click_time).dt.hour.astype('int8')
+    train_df['day'] = pd.to_datetime(train_df.click_time).dt.day.astype('int8') 
+    train_df = do_next_Click( train_df,agg_suffix='nextClick', agg_type='float32'  ); gc.collect()
+    train_df = do_prev_Click( train_df,agg_suffix='prevClick', agg_type='float32'  ); gc.collect()  ## Removed temporarily due RAM sortage. 
     
-        
-    train_df = do_next_prev_Click( train_df,agg_suffix='nextClick', agg_type='float32'  ); gc.collect()
-    train_df = do_next_prev_Click( train_df,agg_suffix='prevClick', agg_type='float32'  ); gc.collect()  ## Removed temporarily due RAM sortage. 
     train_df = do_countuniq( train_df, ['ip'], 'channel' ); gc.collect()
-    train_df = do_countuniq( train_df, ['ip', 'device'], 'channel' ); gc.collect()
     train_df = do_countuniq( train_df, ['ip', 'device', 'os'], 'app'); gc.collect()
-    train_df = do_countuniq( train_df, ['ip', 'device', 'os'], 'channel'); gc.collect()
     train_df = do_countuniq( train_df, ['ip', 'day'], 'hour' ); gc.collect()
     train_df = do_countuniq( train_df, ['ip'], 'app'); gc.collect()
     train_df = do_countuniq( train_df, ['ip', 'app'], 'os'); gc.collect()
@@ -278,20 +303,21 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
     train_df = do_count( train_df, ['ip', 'day', 'hour'] ); gc.collect()
     train_df = do_count( train_df, ['ip', 'app']); gc.collect()
     train_df = do_count( train_df, ['ip', 'app', 'os']); gc.collect()
-    train_df = do_var( train_df, ['ip', 'day', 'channel'], 'hour'); gc.collect()
+    # train_df = do_var( train_df, ['ip', 'day', 'channel'], 'hour'); gc.collect()
     train_df = do_var( train_df, ['ip', 'app', 'os'], 'hour'); gc.collect()
-    train_df = do_var( train_df, ['ip', 'app', 'channel'], 'day'); gc.collect()
-    train_df = do_mean( train_df, ['ip', 'app', 'channel'], 'hour' ); gc.collect()
-    
-    #print(train_df.head(5))
+    # train_df = do_var( train_df, ['ip', 'app', 'channel'], 'day'); gc.collect()
+    # train_df = do_mean( train_df, ['ip', 'app', 'channel'], 'hour' ); gc.collect()
+
+    del train_df['day']
     gc.collect()
+
     print('\n\nBefore appending predictors...\n\n',sorted(predictors))
     target = 'is_attributed'
-    word= ['app','device','os', 'channel', 'hour', 'day','minute', 'second']
+    word= ['app','device','os', 'channel', 'hour']
     for feature in word:
         if feature not in predictors:
             predictors.append(feature)
-    categorical = ['app', 'device', 'os', 'channel', 'hour', 'day','minute', 'second']
+    categorical = ['app', 'device', 'os', 'channel', 'hour']
     print('\n\nAfter appending predictors...\n\n',sorted(predictors))
 
     test_df = train_df[len_train:]
@@ -311,7 +337,7 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
     start_time = time.time()
 
     params = {
-        'learning_rate': 0.20,
+        'learning_rate': 0.10,
         #'is_unbalance': 'true', # replaced with scale_pos_weight argument
         'num_leaves': 7,  # 2^max_depth - 1
         'max_depth': 3,  # -1 means no limit
@@ -340,17 +366,21 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
     del val_df
     gc.collect()
 
+    # ax = lgb.plot_importance(bst, max_num_features=300)
+    # plt.savefig('test%d.png'%(fileno), dpi=600, bbox_inches='tight')
+    # plt.show()
+
     print("Predicting...")
     sub['is_attributed'] = bst.predict(test_df[predictors],num_iteration=best_iteration)
-           
-    submit_name = 'sub_it%d.csv'%(fileno)
+
+    submit_name = 'sub{}_{}_{}.csv'.format(fileno,nchunk,val_size)
     sub.to_csv(submit_name,index=False,float_format='%.9f')
     with file_io.FileIO(submit_name, mode='r') as input_f:
         with file_io.FileIO(job_dir + '/' + submit_name, mode='w+') as output_f:
             output_f.write(input_f.read())
 
 
-    model_name = 'model%d.txt'%(fileno)
+    model_name = 'model{}_{}_{}.txt'.format(fileno,nchunk,val_size)
     bst.save_model(model_name)
     
     # Save the model to the Cloud Storage bucket's jobs directory
@@ -359,14 +389,14 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket/kaggle/TalkingDataAdTracking/i
             output_f.write(input_f.read())
             
     print("done...")
-    
-    
+
+
 ####### Chunk size defining and final run  ############
 
 if __name__ == '__main__':
     nrows=184903891-1
-    nchunk=140000000#80000000
-    val_size=10000000#2500000
+    nchunk=180000000#120000000#150000000
+    val_size=9000000#2500000
 
     frm=nrows-nchunk
 
@@ -389,5 +419,5 @@ if __name__ == '__main__':
       help='Cloud storage bucket to export the model and store temp files')
     args = parser.parse_args()
     arguments = args.__dict__
-    
+
     DO(frm,to,FILENO,**arguments)
