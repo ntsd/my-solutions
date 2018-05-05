@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 FILENO=1 #To distinguish the output file name.
-debug=1  #Whethere or not in debuging mode
+debug=0  #Whethere or not in debuging mode
 gcloud=1
 
 import pandas as pd
@@ -193,11 +193,11 @@ from pandas.compat import StringIO
 
 # read the input data
 def read_data(gcs_path, **args):# use this function instead pandas read csv in gcloud ml engine
-   print('downloading csv file from', gcs_path)     
-   file_stream = file_io.FileIO(gcs_path, mode='r')
-   data = pd.read_csv(StringIO(file_stream.read()), **args)
-   #print(data.head())
-   return data
+    print('downloading csv file from', gcs_path)
+    file_stream = file_io.FileIO(gcs_path, mode='r')
+    data = pd.read_csv(StringIO(file_stream.read()), **args)
+    #print(data.head())
+    return data
 
 def DO(frm,to,fileno,train_file='gs://ntsd-bucket-us-central1/kaggle/TalkingDataAdTracking/input/train.pkl',
                test_file='gs://ntsd-bucket-us-central1/kaggle/TalkingDataAdTracking/input/test.pkl',
@@ -241,8 +241,9 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket-us-central1/kaggle/TalkingData
     train_df['minute'] = pd.to_datetime(train_df.click_time).dt.minute.astype('int8')
 #     train_df['second'] = pd.to_datetime(train_df.click_time).dt.second.astype('int8')
     
-    #train_df = do_next_Click( train_df,agg_suffix='nextClick', agg_type='float32'  ); gc.collect()
-    #train_df = do_prev_Click( train_df,agg_suffix='prevClick', agg_type='float32'  ); gc.collect()  ## Removed temporarily due RAM sortage. 
+    if gcloud:
+        train_df = do_next_Click( train_df,agg_suffix='nextClick', agg_type='float32'  ); gc.collect()
+        train_df = do_prev_Click( train_df,agg_suffix='prevClick', agg_type='float32'  ); gc.collect()  ## Removed temporarily due RAM sortage. 
     train_df = do_countuniq( train_df, ['ip'], 'channel' ); gc.collect()
     train_df = do_countuniq( train_df, ['ip'], 'os' ); gc.collect()
     train_df = do_countuniq( train_df, ['ip'], 'hour' ); gc.collect()
@@ -313,8 +314,8 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket-us-central1/kaggle/TalkingData
                 'learning_rate': 0.3,
                 'n_estimators': 100,
                 'silent': False,
-                'objective': 'binary:logistic',
-                'eval_metric': 'auc', 
+                'objective': 'binary:logistic',#'binary:logistic',
+                'eval_metric': 'logloss',  # auc
                 'nthread':8,
                 'gamma': 5.103973694670875e-08,
                 'max_delta_step': 20,
@@ -333,7 +334,7 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket-us-central1/kaggle/TalkingData
         if debug:
             xgb_params['tree_method'] = 'hist'
         else:
-            xgb_params['tree_method'] = 'gpu_hist'
+            xgb_params['tree_method'] = 'hist'
 
     xgtrain = xgb.DMatrix(train_df[predictors_sorted].values, label=train_df[target].values)
     xgvalid = xgb.DMatrix(val_df[predictors_sorted].values, label=val_df[target].values)
@@ -349,9 +350,6 @@ def DO(frm,to,fileno,train_file='gs://ntsd-bucket-us-central1/kaggle/TalkingData
     print("bst1.best_iteration: ", trained_model.best_iteration)
 
     print('[{}]: model training time'.format(time.time() - start_time))
-    del train_df
-    del val_df
-    gc.collect()
 
     # ax = lgb.plot_importance(bst, max_num_features=300)
     # plt.savefig('test%d.png'%(fileno), dpi=600, bbox_inches='tight')
