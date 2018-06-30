@@ -1,0 +1,1 @@
+for([x,y,a,b]=readline().split` `;;){s="";if(y>+b)s+="S";b++;if(x>+a)s+="E";if(x<+a)s+="W";print(s)}
