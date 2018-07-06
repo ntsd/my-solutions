@@ -36,9 +36,9 @@ class Wall:
         and self.y == other.y and abs(self.x-other.x)<2:
             return True
         if self.orientation != other.orientation:
-            if self.orientation == 'H' and self.x==other.x+1 and self.y==other.y-1:
+            if self.orientation == 'V' and self.x==other.x+1 and self.y==other.y-1:
                 return True
-            elif self.x==other.x-1 and self.y==other.y+1:
+            elif self.orientation == 'H' and self.x==other.x-1 and self.y==other.y+1:
                 return True
         return False
     
@@ -150,7 +150,7 @@ def action(): # action: LEFT, RIGHT, UP, DOWN or "putX putY putOrientation" to p
                     if best_cost - my_score == 0:
                         op_score = sum([op.score(graph_temp) for op in op_players])
                         simulate_walls.append((op_score, wall))
-        for wall_y in range(0, h-1, 2): # check 'V' wall # todo reduce time
+        for wall_y in range(0, h-1, 2): # check 'V' wall # todo reduce tiscoreme
             for wall_x in range(1, w):
                 wall = Wall(wall_x, wall_y, 'V')
                 # print(wall_x, wall_y, file=sys.stderr)

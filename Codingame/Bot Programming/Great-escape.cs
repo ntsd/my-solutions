@@ -5,6 +5,12 @@ using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 
+using System.Runtime.Serialization.Formatters.Binary;
+// height=9
+// positions=8 1 1 4
+// width=9
+// symmetric=false
+
 class Path
 {
     public int cost;
@@ -24,7 +30,7 @@ class Path
     }
 }
 
-class HeapQueue
+class HeapQueue // don't use anymore
 {
     public int count;
     public int index;
@@ -94,13 +100,13 @@ class Wall: Point
         this.orientation = orientation;
     }
     
-    public bool isCross(Wall other){
+    public bool IsCross(Wall other){
         if(this.orientation == other.orientation && this.x == other.x && this.y == other.y)return true;
-        if(this.orientation.Equals('V') && other.orientation.Equals('V') && this.x == other.x && Math.Abs(this.y-other.y)<2)return true;
-        if(this.orientation.Equals('H') && other.orientation.Equals('H') && this.y == other.y && Math.Abs(this.x-other.x)<2)return true;
+        if(this.orientation.Equals("V") && other.orientation.Equals("V") && this.x == other.x && Math.Abs(this.y-other.y)<2)return true;
+        if(this.orientation.Equals("H") && other.orientation.Equals("H") && this.y == other.y && Math.Abs(this.x-other.x)<2)return true;
         if(this.orientation != other.orientation){
-            if(this.orientation.Equals('H') && this.x==other.x+1 && this.y==other.y-1)return true;
-            else if(this.orientation.Equals('V') && this.x==other.x-1 && this.y==other.y+1)return true;
+            if(this.orientation.Equals("V") && this.x==other.x+1 && this.y==other.y-1)return true;
+            if(this.orientation.Equals("H") && this.x==other.x-1 && this.y==other.y+1)return true;
         }
         return false;
     }
@@ -114,6 +120,11 @@ class Wall: Point
     {
         return base.GetHashCode() ^ orientation.GetHashCode();
     }
+    
+    public override string ToString()
+    {
+        return String.Format("({0},{1},{2})",this.x, this.y, this.orientation);
+    }
 }
 
 class Player
@@ -121,7 +132,7 @@ class Player
     public int id { get; set; }
     public int x { get; set; }
     public int y { get; set; }
-    public int walls_left { get; set; }
+    public int wallsLeft { get; set; }
     public List<Point> targets { get; set; }
     
     public Player(int id, List<Point> targets)
@@ -131,27 +142,28 @@ class Player
         // Console.Error.WriteLine(id.ToString() +' '+ targets[0].ToString());
     }
     
-    public void update(string[] inputs)
+    public void Update(string[] inputs)
     {
         this.x = int.Parse(inputs[0]);
         this.y = int.Parse(inputs[1]);
-        this.walls_left = int.Parse(inputs[2]);
+        this.wallsLeft = int.Parse(inputs[2]);
     }
     
-    public Path shortest_path_closet(Dictionary<Point, List<Point>> graph){
+    public Path ShortestPathCloset(Dictionary<Point, List<Point>> graph){
         Queue<Path> queue = new Queue<Path>();
         queue.Enqueue(new Path(0, new Point(this.x, this.y), new List<Point>()));
         HashSet<Point> seen = new HashSet<Point>();
         while(queue.Count > 0){
             Path path_ = queue.Dequeue();
+            // Console.Error.WriteLine(path_.ToString());
             if(!seen.Contains(path_.next)){
-                List<Point> new_path = path_.path;
+                List<Point> new_path = path_.path.ToList(); // use ToList to clone list<point>
                 new_path.Add(path_.next);
                 seen.Add(path_.next);
-                // if(this.targets.Contains(path_.next))return path_;
-                foreach(Point t in this.targets){
-                    if(t.x == path_.next.x && t.y==path_.next.y)return path_;
-                }
+                if(this.targets.Contains(path_.next))return path_;
+                // foreach(Point t in this.targets){
+                //     if(t.x == path_.next.x && t.y==path_.next.y)return path_;
+                // }
                 foreach(Point next in graph[path_.next]){
                     queue.Enqueue(new Path(path_.cost+1, next, new_path));
                 }
@@ -160,7 +172,14 @@ class Player
         return null;// return null if not see path
     }
     
-    public string getDirection(Point next_point){
+    public int Score(Dictionary<Point, List<Point>> graph){
+        Path shortestPath = this.ShortestPathCloset(graph);
+        if(shortestPath == null)return -1; // no way to target
+        return shortestPath.cost;
+    }
+    
+    
+    public string GetDirection(Point next_point){
         if(next_point.x < this.x)return "LEFT";
         if(next_point.x > this.x)return "RIGHT";
         if(next_point.y < this.y)return "UP";
@@ -169,20 +188,78 @@ class Player
     }
 }
 
-
 class Program
 {
-    static string action(Player myPlayer, List<Player> opPlayer, Dictionary<Point, List<Point>> graph){// todo
+
+    static string action(Player myPlayer, List<Player> opPlayer, Dictionary<Point, List<Point>> graph, List<Wall> walls, int h, int w){
         
+        Path myShortestPath = myPlayer.ShortestPathCloset(graph);
+        // Console.Error.WriteLine(myShortestPath.cost.ToString() +' '+ myShortestPath.path[1].ToString());
+        int oldMyScore = myShortestPath.cost;
         
-        Path myShortestPath = myPlayer.shortest_path_closet(graph);
-        
-        Console.Error.WriteLine(myShortestPath.path[1].ToString());
-        return myPlayer.getDirection(myShortestPath.path[1]);
+        if(myPlayer.wallsLeft > 0){
+            Wall bestWall = null;
+            int bestScore = 0;
+            foreach(int wall_y in Enumerable.Range(1,h-1)){
+                foreach(int wall_x in Enumerable.Range(0,w-1)){
+                    Wall wall = new Wall(wall_x, wall_y, "H");
+                    // Console.Error.WriteLine((Point)wall);
+                    if(!walls.Exists(w_ => w_.IsCross(wall))){
+                        Dictionary<Point, List<Point>> graph_temp = graph.ToDictionary(entry => entry.Key, 
+                                               entry => entry.Value.ToList()); // to deep copy
+                        graph_temp[new Point(wall_x, wall_y)].Remove(new Point(wall_x, wall_y-1));
+                        graph_temp[new Point(wall_x, wall_y-1)].Remove(new Point(wall_x, wall_y));
+                        graph_temp[new Point(wall_x+1, wall_y)].Remove(new Point(wall_x+1, wall_y-1));
+                        graph_temp[new Point(wall_x+1, wall_y-1)].Remove(new Point(wall_x+1, wall_y));
+                        int newMyScore = myPlayer.Score(graph_temp);
+                        if(oldMyScore - newMyScore == 0){ // to check that not reduce own path
+                            int score = 0;
+                            foreach(Player op in opPlayer){
+                                score += op.Score(graph_temp);
+                            }
+                            if(score > bestScore){
+                                bestScore = score;
+                                bestWall = wall;
+                            }
+                        }
+                    }
+                }
+            }
+            foreach(int wall_y in Enumerable.Range(0,h-1)){
+                foreach(int wall_x in Enumerable.Range(1,w-1)){
+                    Wall wall = new Wall(wall_x, wall_y, "V");
+                    //Console.Error.WriteLine((Point)wall);
+                    if(!walls.Exists(w_ => w_.IsCross(wall))){
+                        Dictionary<Point, List<Point>> graph_temp = graph.ToDictionary(entry => entry.Key, 
+                                               entry => entry.Value.ToList()); // to deep copy
+                        graph_temp[new Point(wall_x, wall_y)].Remove(new Point(wall_x-1, wall_y));
+                        graph_temp[new Point(wall_x-1, wall_y)].Remove(new Point(wall_x, wall_y));
+                        graph_temp[new Point(wall_x, wall_y+1)].Remove(new Point(wall_x-1, wall_y+1));
+                        graph_temp[new Point(wall_x-1, wall_y+1)].Remove(new Point(wall_x, wall_y+1));
+                        int newMyScore = myPlayer.Score(graph_temp);
+                        if(oldMyScore - newMyScore == 0){ // to check that not reduce own path
+                            int score = 0;
+                            foreach(Player op in opPlayer){
+                                score += op.Score(graph_temp);
+                            }
+                            if(score > bestScore){
+                                bestScore = score;
+                                bestWall = wall;
+                            }
+                        }
+                    }
+                }
+            }
+            if(bestWall != null){
+                return String.Format("{0} {1} {2}",bestWall.x, bestWall.y, bestWall.orientation );
+            }
+        }
+        return myPlayer.GetDirection(myShortestPath.path[1]);
     }
     
     static void Main(string[] args)
     {
+                
         string[] inputs;
         inputs = Console.ReadLine().Split(' ');
         int w = int.Parse(inputs[0]); // width of the board
@@ -198,6 +275,7 @@ class Program
         {
             foreach (int x in Enumerable.Range(0,w))
             {
+                // Console.Error.WriteLine(x.ToString()+y.ToString());
                 List<Point> neighbours = new List<Point>();
                 if(x < w-1)neighbours.Add(new Point(x + 1, y));
                 else targets[0].Add(new Point(x, y));
@@ -221,7 +299,7 @@ class Program
         while (true)// game loop
         {
             foreach(Player player in players){
-                player.update(Console.ReadLine().Split(' '));
+                player.Update(Console.ReadLine().Split(' '));
             }
             
             int wallCount = int.Parse(Console.ReadLine());
@@ -232,7 +310,12 @@ class Program
                 int wall_y = int.Parse(inputs[1]);
                 string orientation = inputs[2]; // ('H' or 'V')
                 Wall wall = new Wall(wall_x, wall_y, orientation);
-                if(!walls.Exists(w_ => w_.isCross(wall))){
+                foreach(Wall w_ in walls){
+                    if(wall.IsCross(w_)){
+                        Console.Error.WriteLine(wall.ToString()+w_.ToString());
+                    }
+                }
+                if(!walls.Exists(w_ => w_.IsCross(wall))){
                     if(orientation.Equals("H")){
                         graph[new Point(wall_x, wall_y)].Remove(new Point(wall_x, wall_y-1));
                         graph[new Point(wall_x, wall_y-1)].Remove(new Point(wall_x, wall_y));
@@ -246,6 +329,7 @@ class Program
                         graph[new Point(wall_x, wall_y+1)].Remove(new Point(wall_x-1, wall_y+1));
                         graph[new Point(wall_x-1, wall_y+1)].Remove(new Point(wall_x, wall_y+1));
                     }
+                    Console.Error.WriteLine(wall);
                     walls.Add(wall);
                 }
             }
@@ -253,8 +337,7 @@ class Program
             Player myPlayer = players[myId];
             List<Player> opPlayer = players.Where( p => p.id != myId && p.x != -1).ToList();
             
-            string output = action(myPlayer, opPlayer, graph);
+            string output = action(myPlayer, opPlayer, graph, walls, h, w);
             Console.WriteLine(output);
         }
-    }
-}
+    }}
