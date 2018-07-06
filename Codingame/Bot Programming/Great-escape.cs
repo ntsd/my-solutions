@@ -160,7 +160,10 @@ class Player
                 List<Point> new_path = path_.path.ToList(); // use ToList to clone list<point>
                 new_path.Add(path_.next);
                 seen.Add(path_.next);
-                if(this.targets.Contains(path_.next))return path_;
+                if(this.targets.Contains(path_.next)){
+                    path_.path = new_path;
+                    return path_;
+                }
                 // foreach(Point t in this.targets){
                 //     if(t.x == path_.next.x && t.y==path_.next.y)return path_;
                 // }
@@ -196,6 +199,10 @@ class Program
         Path myShortestPath = myPlayer.ShortestPathCloset(graph);
         // Console.Error.WriteLine(myShortestPath.cost.ToString() +' '+ myShortestPath.path[1].ToString());
         int oldMyScore = myShortestPath.cost;
+        int oldOpScore = 0;
+        foreach(Player op in opPlayer){
+            oldOpScore += op.Score(graph);
+        }
         
         if(myPlayer.wallsLeft > 0){
             Wall bestWall = null;
@@ -212,13 +219,13 @@ class Program
                         graph_temp[new Point(wall_x+1, wall_y)].Remove(new Point(wall_x+1, wall_y-1));
                         graph_temp[new Point(wall_x+1, wall_y-1)].Remove(new Point(wall_x+1, wall_y));
                         int newMyScore = myPlayer.Score(graph_temp);
-                        if(oldMyScore - newMyScore == 0){ // to check that not reduce own path
-                            int score = 0;
+                        if(oldMyScore >= newMyScore){ // to check that not reduce own path
+                            int opScore = 0;
                             foreach(Player op in opPlayer){
-                                score += op.Score(graph_temp);
+                                opScore += op.Score(graph_temp);
                             }
-                            if(score > bestScore){
-                                bestScore = score;
+                            if(opScore > oldOpScore && opScore > bestScore){
+                                bestScore = opScore;
                                 bestWall = wall;
                             }
                         }
@@ -237,13 +244,13 @@ class Program
                         graph_temp[new Point(wall_x, wall_y+1)].Remove(new Point(wall_x-1, wall_y+1));
                         graph_temp[new Point(wall_x-1, wall_y+1)].Remove(new Point(wall_x, wall_y+1));
                         int newMyScore = myPlayer.Score(graph_temp);
-                        if(oldMyScore - newMyScore == 0){ // to check that not reduce own path
-                            int score = 0;
+                        if(oldMyScore >= newMyScore){ // to check that not reduce own path
+                            int opScore = 0;
                             foreach(Player op in opPlayer){
-                                score += op.Score(graph_temp);
+                                opScore += op.Score(graph_temp);
                             }
-                            if(score > bestScore){
-                                bestScore = score;
+                            if(opScore > oldOpScore && opScore > bestScore){
+                                bestScore = opScore;
                                 bestWall = wall;
                             }
                         }
@@ -310,11 +317,11 @@ class Program
                 int wall_y = int.Parse(inputs[1]);
                 string orientation = inputs[2]; // ('H' or 'V')
                 Wall wall = new Wall(wall_x, wall_y, orientation);
-                foreach(Wall w_ in walls){
-                    if(wall.IsCross(w_)){
-                        Console.Error.WriteLine(wall.ToString()+w_.ToString());
-                    }
-                }
+                // foreach(Wall w_ in walls){ //to debug wall
+                //     if(wall.IsCross(w_)){
+                //         Console.Error.WriteLine(wall.ToString()+w_.ToString());
+                //     }
+                // }
                 if(!walls.Exists(w_ => w_.IsCross(wall))){
                     if(orientation.Equals("H")){
                         graph[new Point(wall_x, wall_y)].Remove(new Point(wall_x, wall_y-1));
