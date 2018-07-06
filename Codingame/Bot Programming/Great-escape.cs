@@ -52,7 +52,7 @@ class HeapQueue // don't use anymore
     
     public Path Pop(){
         Path path = paths[paths.Keys[0]]; // get frist element
-        Console.Error.WriteLine(path.ToString());
+        // Console.Error.WriteLine(path.ToString());
         paths.RemoveAt(0);
         count--;
         return path;
@@ -101,10 +101,10 @@ class Wall: Point
     }
     
     public bool IsCross(Wall other){
-        if(this.orientation == other.orientation && this.x == other.x && this.y == other.y)return true;
+        if(this.orientation.Equals(other.orientation) && this.x == other.x && this.y == other.y)return true;
         if(this.orientation.Equals("V") && other.orientation.Equals("V") && this.x == other.x && Math.Abs(this.y-other.y)<2)return true;
         if(this.orientation.Equals("H") && other.orientation.Equals("H") && this.y == other.y && Math.Abs(this.x-other.x)<2)return true;
-        if(this.orientation != other.orientation){
+        if(this.orientation.Equals(other.orientation)){
             if(this.orientation.Equals("V") && this.x==other.x+1 && this.y==other.y-1)return true;
             if(this.orientation.Equals("H") && this.x==other.x-1 && this.y==other.y+1)return true;
         }
@@ -113,7 +113,7 @@ class Wall: Point
     
     public override bool Equals(Object obj) 
     {
-        return base.Equals(obj) && orientation == ((Wall)obj).orientation;
+        return base.Equals(obj) && orientation.Equals(((Wall)obj).orientation);
     }
     
     public override int GetHashCode() 
@@ -336,7 +336,7 @@ class Program
                         graph[new Point(wall_x, wall_y+1)].Remove(new Point(wall_x-1, wall_y+1));
                         graph[new Point(wall_x-1, wall_y+1)].Remove(new Point(wall_x, wall_y+1));
                     }
-                    Console.Error.WriteLine(wall);
+                    // Console.Error.WriteLine(wall);
                     walls.Add(wall);
                 }
             }
