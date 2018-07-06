@@ -104,7 +104,7 @@ class Wall: Point
         if(this.orientation.Equals(other.orientation) && this.x == other.x && this.y == other.y)return true;
         if(this.orientation.Equals("V") && other.orientation.Equals("V") && this.x == other.x && Math.Abs(this.y-other.y)<2)return true;
         if(this.orientation.Equals("H") && other.orientation.Equals("H") && this.y == other.y && Math.Abs(this.x-other.x)<2)return true;
-        if(this.orientation.Equals(other.orientation)){
+        if(!this.orientation.Equals(other.orientation)){
             if(this.orientation.Equals("V") && this.x==other.x+1 && this.y==other.y-1)return true;
             if(this.orientation.Equals("H") && this.x==other.x-1 && this.y==other.y+1)return true;
         }
@@ -177,7 +177,10 @@ class Player
     
     public int Score(Dictionary<Point, List<Point>> graph){
         Path shortestPath = this.ShortestPathCloset(graph);
-        if(shortestPath == null)return -1; // no way to target
+        if(shortestPath == null){
+            Console.Error.WriteLine("no way");
+            return -100000000; // no way to target
+        }
         return shortestPath.cost;
     }
     
@@ -219,13 +222,13 @@ class Program
                         graph_temp[new Point(wall_x+1, wall_y)].Remove(new Point(wall_x+1, wall_y-1));
                         graph_temp[new Point(wall_x+1, wall_y-1)].Remove(new Point(wall_x+1, wall_y));
                         int newMyScore = myPlayer.Score(graph_temp);
-                        if(oldMyScore >= newMyScore){ // to check that not reduce own path
-                            int opScore = 0;
+                        if(oldMyScore == newMyScore){ // to check that not reduce own path
+                            int opScoreAll = 0;
                             foreach(Player op in opPlayer){
-                                opScore += op.Score(graph_temp);
+                                opScoreAll += op.Score(graph_temp);
                             }
-                            if(opScore > oldOpScore && opScore > bestScore){
-                                bestScore = opScore;
+                            if(opScoreAll > oldOpScore && opScoreAll > bestScore){
+                                bestScore = opScoreAll;
                                 bestWall = wall;
                             }
                         }
@@ -244,13 +247,14 @@ class Program
                         graph_temp[new Point(wall_x, wall_y+1)].Remove(new Point(wall_x-1, wall_y+1));
                         graph_temp[new Point(wall_x-1, wall_y+1)].Remove(new Point(wall_x, wall_y+1));
                         int newMyScore = myPlayer.Score(graph_temp);
-                        if(oldMyScore >= newMyScore){ // to check that not reduce own path
-                            int opScore = 0;
+                        if(oldMyScore == newMyScore){ // to check that not reduce own path
+                            int opScoreAll = 0;
                             foreach(Player op in opPlayer){
-                                opScore += op.Score(graph_temp);
+                                opScoreAll += op.Score(graph_temp);
                             }
-                            if(opScore > oldOpScore && opScore > bestScore){
-                                bestScore = opScore;
+                            // Console.Error.WriteLine(opScoreAll.ToString() + ':' + oldOpScore.ToString());
+                            if(opScoreAll > oldOpScore && opScoreAll > bestScore){
+                                bestScore = opScoreAll;
                                 bestWall = wall;
                             }
                         }
