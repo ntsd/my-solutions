@@ -1,3 +1,4 @@
+// this code top 10 in silver
 using System;
 using System.Linq;
 using System.IO;
@@ -178,7 +179,7 @@ class Player
     public int Score(Dictionary<Point, List<Point>> graph){
         Path shortestPath = this.ShortestPathCloset(graph);
         if(shortestPath == null){
-            Console.Error.WriteLine("no way");
+            // Console.Error.WriteLine("no way");
             return -100000000; // no way to target
         }
         return shortestPath.cost;
@@ -203,11 +204,13 @@ class Program
         // Console.Error.WriteLine(myShortestPath.cost.ToString() +' '+ myShortestPath.path[1].ToString());
         int oldMyScore = myShortestPath.cost;
         int oldOpScore = 0;
+        int wallOpLeft = 0;
         foreach(Player op in opPlayer){
             oldOpScore += op.Score(graph);
+            wallOpLeft += op.wallsLeft;
         }
         
-        if(myPlayer.wallsLeft > 0){
+        if(myPlayer.wallsLeft > 0 && (opPlayer.Count < 2 || wallOpLeft == 0)){
             Wall bestWall = null;
             int bestScore = 0;
             foreach(int wall_y in Enumerable.Range(1,h-1)){
