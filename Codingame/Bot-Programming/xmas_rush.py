@@ -5,8 +5,9 @@ using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 
-//TODO 2 items in save move
+// TODO 2 items in save move
 // item in player tile
+// simulate
 
 class Path
 {
@@ -75,6 +76,22 @@ class Map
             tiles[new Point(x+1, id)] = tiles[new Point(x, id)];
         }
         tiles[new Point(0, id)] = newTile;
+        
+        this.buildGraph();
+        foreach(Player p in Globals.players){
+            if(p.y == id){
+                p.moveRight();
+            }
+        }
+        foreach(Item i in Globals.items){
+            if(i.y == id){
+                i.moveRight();
+            }
+            if(i.x == -1 && i.y == -1) {
+                i.x = 0;
+                i.y = id;
+            }
+        }
     }
     
     public void pushLeft(int id, Tile newTile) {
@@ -83,6 +100,23 @@ class Map
             tiles[new Point(x-1, id)] = tiles[new Point(x, id)];
         }
         tiles[new Point(6, id)] = newTile;
+        
+        this.buildGraph();
+        // Console.Error.WriteLine(String.Join(":", players[0].items));   
+        foreach(Player p in Globals.players){
+            if(p.y == id){
+                p.moveLeft();
+            }
+        }
+        foreach(Item i in Globals.items){
+            if(i.y == id){
+                i.moveLeft();
+            }
+            if(i.x == -1 && i.y == -1) {
+                i.x = 6;
+                i.y = id;
+            }
+        }
     }
     
     public void pushDown(int id, Tile newTile) {
@@ -91,6 +125,22 @@ class Map
             tiles[new Point(id, y+1)] = tiles[new Point(id, y)];
         }
         tiles[new Point(id, 0)] = newTile;
+        
+        this.buildGraph();
+        foreach(Player p in Globals.players){
+            if(p.x == id){
+                p.moveDown();
+            }
+        }
+        foreach(Item i in Globals.items){
+            if(i.x == id){
+                i.moveDown();
+            }
+            if(i.x == -1 && i.y == -1) {
+                i.x = id;
+                i.y = 0;
+            }
+        }
     }
     
     public void pushUp(int id, Tile newTile) {
@@ -99,6 +149,22 @@ class Map
             tiles[new Point(id, y-1)] = tiles[new Point(id, y)];
         }
         tiles[new Point(id, 6)] = newTile;
+        
+        this.buildGraph();
+        foreach(Player p in Globals.players){
+            if(p.x == id){
+                p.moveUp();
+            }
+        }
+        foreach(Item i in Globals.items){
+            if(i.x == id){
+                i.moveUp();
+            }
+            if(i.x == -1 && i.y == -1) {
+                i.x = id;
+                i.y = 6;
+            }
+        }
     }
     
     public void buildGraph() {
@@ -121,6 +187,14 @@ class Map
             }
             graph.Add(tile.Key, node);       
         }
+    }
+    
+    public void backup() {
+        this.backupTiles = this.tiles.ToDictionary(entry => entry.Key, entry => entry.Value); // to deep copy
+    }
+    
+    public void restore() {
+        this.tiles = this.backupTiles.ToDictionary(entry => entry.Key, entry => entry.Value);
     }
 }
 
@@ -194,32 +268,32 @@ class Item: Point
     public void moveLeft() {
         this.x = this.x-1;
         if(this.x < 0){
-            this.x=-99;
-            this.y=-99;
+            this.x=-1;
+            this.y=-1;
         }
     }
     
     public void moveRight() {
         this.x = this.x+1;
         if(this.x > 6){
-            this.x=-99;
-            this.y=-99;
+            this.x=-1;
+            this.y=-1;
         }
     }
     
     public void moveUp() {
         this.y = this.y-1;
         if(this.y < 0){
-            this.x=-99;
-            this.y=-99;
+            this.x=-1;
+            this.y=-1;
         }
     }
     
     public void moveDown() {
         this.y = this.y+1;
         if(this.y > 6){
-            this.x=-99;
-            this.y=-99;
+            this.x=-1;
+            this.y=-1;
         }
     }
 }
@@ -354,6 +428,15 @@ class Player: Point
         return null;
     }
     
+    public void backup() {
+        backupPos();
+        backupItem();
+    }
+    
+    public void restore() {
+        restorePos();
+        restoreItem();
+    }
     
     public void backupPos() {
         this.backupX = this.x+0;
@@ -374,44 +457,45 @@ class Player: Point
     }
 }
 
-class Game
+class Simulate
 {
-    static string push(Map map, List<Player> players) { // 28
+    List<Player> players;
+    List<Item> items;
+    Map map;
+    int turnType;
+    
+    public Simulate() {
+        this.players = Globals.players;
+        this.items = Globals.items;
+        this.map = Globals.map;
+        this.turnType = Globals.turnType;
+    }
+    
+    public string bestMove() {
+        if(turnType == 0) {
+            return push();
+        } else {
+            return move();
+        }
+    }
+    
+    string push() { // 28
         int bestScore = -999999999;
         int score;
         String bestAction = "";
         
-        foreach(Player p in players){
-            p.backupItem();
-            p.backupPos();
+        foreach(Player p in players) {
+            p.backup();
         }
                 
-        for(int id=0; id<7; id++){ //id
+        for(int id=0; id<7; id++) { //id
             // LEFT
-            map.tiles = map.backupTiles.ToDictionary(entry => entry.Key, entry => entry.Value);
+            map.backup();
             foreach(Player p in players){
-                p.restoreItem();
-                p.restorePos();
+                p.backup();
             }
             // Console.Error.WriteLine(map.tiles[new Point(0,0)].str);
             map.pushLeft(id, players[0].playerTile);
-            map.buildGraph();
-            // Console.Error.WriteLine(String.Join(":", players[0].items));   
-            foreach(Player p in players){
-                if(p.y == id){
-                    p.moveLeft();
-                }
-                foreach(Item i in p.items){
-                    if(i.y == id){
-                        i.moveLeft();
-                    }
-                    if(i.x == -1 && i.y == -1) {
-                        i.x = 6;
-                        i.y = id;
-                    }
-                }
-                p.setTargetList();
-            }
             // Console.Error.WriteLine(String.Join(":", players[0].items));   
             score = players[0].scorePush(map.graph);
             // Console.Error.WriteLine(id+";left;"+score);
@@ -423,26 +507,9 @@ class Game
             // RIGHT
             map.tiles = map.backupTiles.ToDictionary(entry => entry.Key, entry => entry.Value);
             foreach(Player p in players){
-                p.restoreItem();
-                p.restorePos();
+                p.restore();
             }
             map.pushRight(id, players[0].playerTile);
-            map.buildGraph();
-            foreach(Player p in players){
-                if(p.y == id){
-                    p.moveRight();
-                }
-                foreach(Item i in p.items){
-                    if(i.y == id){
-                        i.moveRight();
-                    }
-                    if(i.x == -1 && i.y == -1) {
-                        i.x = 0;
-                        i.y = id;
-                    }
-                }
-                p.setTargetList();
-            }
             score = players[0].scorePush(map.graph);
             // Console.Error.WriteLine(id+";right;"+score);
             if(score > bestScore) {
@@ -454,27 +521,10 @@ class Game
             map.tiles = map.backupTiles.ToDictionary(entry => entry.Key, entry => entry.Value);
             // Console.Error.WriteLine(map.tiles[new Point(4,5)].str);
             foreach(Player p in players){
-                p.restoreItem();
-                p.restorePos();
+                p.restore();
             }
             map.pushUp(id, players[0].playerTile);
             // Console.Error.WriteLine(map.tiles[new Point(4,5)].str);
-            map.buildGraph();
-            foreach(Player p in players){
-                if(p.x == id){
-                    p.moveUp();
-                }
-                foreach(Item i in p.items){
-                    if(i.x == id){
-                        i.moveUp();
-                    }
-                    if(i.x == -1 && i.y == -1) {
-                        i.x = id;
-                        i.y = 6;
-                    }
-                }
-                p.setTargetList();
-            }
             score = players[0].scorePush(map.graph);
             // Console.Error.WriteLine(id+";up;"+score);
             if(score > bestScore) {
@@ -485,26 +535,9 @@ class Game
             //Down
             map.tiles = map.backupTiles.ToDictionary(entry => entry.Key, entry => entry.Value);
             foreach(Player p in players){
-                p.restoreItem();
-                p.restorePos();
+                p.restore();
             }
             map.pushDown(id, players[0].playerTile);
-            map.buildGraph();
-            foreach(Player p in players){
-                if(p.x == id){
-                    p.moveDown();
-                }
-                foreach(Item i in p.items){
-                    if(i.x == id){
-                        i.moveDown();
-                    }
-                    if(i.x == -1 && i.y == -1) {
-                        i.x = id;
-                        i.y = 0;
-                    }
-                }
-                p.setTargetList();
-            }
             score = players[0].scorePush(map.graph);
             // Console.Error.WriteLine(id+";down;"+score);
             if(score > bestScore) {
@@ -520,7 +553,7 @@ class Game
         }
     }
     
-    static string move(Map map, List<Player> players) { // 4
+    string move() { // 4
         List<String> moves = new List<String>();
         map.buildGraph();
         
@@ -562,6 +595,14 @@ class Game
         }
         return "MOVE "+String.Join(" ", moves.ToArray());
     }
+}
+
+class Globals
+{
+    public static List<Player> players;
+    public static List<Item> items;
+    public static Map map;
+    public static int turnType;
     
     static void Main(string[] args)
     {
@@ -570,9 +611,9 @@ class Game
         // game loop
         while (true)
         {
-            Map map = new Map();            
+            map = new Map();            
             
-            int turnType = int.Parse(Console.ReadLine());
+            turnType = int.Parse(Console.ReadLine());
             for (int i = 0; i < 7; i++)
             {
                 inputs = Console.ReadLine().Split(' ');
@@ -584,7 +625,7 @@ class Game
                 }
             }
             
-            List<Player> players = new List<Player>();
+            players = new List<Player>();
             
             for (int i = 0; i < 2; i++)
             {
@@ -597,6 +638,8 @@ class Game
                 players.Add(new Player(playerX, playerY, numPlayerCards, new Tile(playerTile)));
             }
             
+            items = new List<Item>();
+            
             int numItems = int.Parse(Console.ReadLine()); // the total number of items available on board and on player tiles
             for (int i = 0; i < numItems; i++)
             {
@@ -605,7 +648,9 @@ class Game
                 int itemX = int.Parse(inputs[1]);
                 int itemY = int.Parse(inputs[2]);
                 int itemPlayerId = int.Parse(inputs[3]);
-                players[itemPlayerId].items.Add(new Item(itemX, itemY, itemName, itemPlayerId));
+                
+                items.Add(new Item(itemX, itemY, itemName, itemPlayerId));
+                players[itemPlayerId].items.Add(items[i]);
             }
             
             int numQuests = int.Parse(Console.ReadLine()); // the total number of revealed quests for both players
@@ -624,15 +669,11 @@ class Game
             players[0].opponent = players[1];
             players[1].opponent = players[0];
             
-            map.backupTiles = map.tiles.ToDictionary(entry => entry.Key, entry => entry.Value); // to deep copy
+            map.backup();
             
-            if(turnType == 0) { // push
-                Console.WriteLine(push(map, players));
-            }
-            else { //move
-                Console.WriteLine(move(map, players)); // PUSH <id> <direction> | MOVE <direction> | PASS
-            }
+            Simulate sim = new Simulate();
             
+            Console.WriteLine(sim.bestMove());
         }
     }
 }
