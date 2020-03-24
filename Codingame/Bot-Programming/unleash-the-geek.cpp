@@ -368,7 +368,9 @@ int main()
         }
 
         // AI ------------------------------------------------------------------
-        auto actions{getActions(game)};
+        auto actions{
+            getActions(game)
+        };
         // AI ------------------------------------------------------------------
 
         for (const Action &action : actions)
