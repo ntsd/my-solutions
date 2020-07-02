@@ -1,2 +1,1 @@
-x,y,a,b=map(int,input().split())
-while 1:print(["","S"][y>b]+["",["W","E"][x>a]][x!=a]);b+=1
+sub p{print@_}($x,$y,$a,$b)=split/ /,<>;{p"S"if$y>$b++;p"E"if$x>$a;p"W"if$x<$a;p$/;redo}
