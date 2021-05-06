@@ -98,35 +98,24 @@ def fill_safe_with_mine(numbers, mssp):
                 if n.type != Type.MINE:
                     n.type = Type.SAFE
         # fill safe, mine by dssp
-        neighbors_edge_combinations = list(itertools.combinations(
-            num.neighbors_edge, 2)) + list(itertools.combinations(num.neighbors_edge, 3))
-        for combination in neighbors_edge_combinations:
-            frozenset_combination = frozenset(combination)
+        neighbors_edge_combinations = map(frozenset, list(itertools.combinations(
+            num.neighbors_edge, 2)) + list(itertools.combinations(num.neighbors_edge, 3)))
+        for frozenset_combination in neighbors_edge_combinations:
             if frozenset_combination in mssp:
                 if num.value - mine_neighbor_edge_len - 1 == 0 and \
                         num.neighbors_edge_len - mssp[frozenset_combination] - mine_neighbor_edge_len >= 1:
                     print('safe', num, frozenset_combination, file=sys.stderr)
                     for n in frozenset(num.neighbors_edge) - frozenset_combination - frozenset(mine_neighbor_edge):
-                        print(
-                            combination,
-                            "safe from combinations_of_" +
-                            str(mssp[frozenset_combination]),
-                            n,
-                            file=sys.stderr
-                        )
+                        print(frozenset_combination, "safe from combinations_of_" +
+                              str(mssp[frozenset_combination]), n, file=sys.stderr)
                         n.type = Type.SAFE
                 if num.value - mine_neighbor_edge_len - 1 == 1 and \
                         num.neighbors_edge_len - mssp[frozenset_combination] - mine_neighbor_edge_len == 1:
                     print('mine', num, frozenset_combination, file=sys.stderr)
                     for n in frozenset(num.neighbors_edge) - frozenset_combination:
                         n.type = Type.MINE
-                        print(
-                            combination,
-                            "mine from combinations_of_" +
-                            str(mssp[frozenset_combination]),
-                            n,
-                            file=sys.stderr
-                        )
+                        print(frozenset_combination, "mine from combinations_of_" +
+                              str(mssp[frozenset_combination]), n, file=sys.stderr)
 
 
 def fill_mine_with_safe(numbers):
