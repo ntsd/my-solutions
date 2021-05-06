@@ -1,8 +1,4 @@
-# TODO
-# Add one mine in 2 blocks, 3 blocks
-
 import sys
-import math
 import itertools
 from enum import Enum
 
@@ -22,20 +18,24 @@ def is_mine(n): return n.type == Type.MINE
 def is_safe(n): return n.type == Type.SAFE
 def is_edge(n): return n.type != Type.NUMBER and n.type != Type.REVEAL
 
+
 def get_unknowns(nodes):
     nodes = list(filter(is_unknown, nodes))
     nodes_len = len(nodes)
     return nodes, nodes_len
+
 
 def get_mines(nodes):
     nodes = list(filter(is_mine, nodes))
     nodes_len = len(nodes)
     return nodes, nodes_len
 
+
 def get_safes(nodes):
     nodes = list(filter(is_safe, nodes))
     nodes_len = len(nodes)
     return nodes, nodes_len
+
 
 class Node:
     def __init__(self, y, x):
@@ -73,53 +73,70 @@ for i in range(h):
         ]))
 
 # start at middle
-for i in range(h):
+for _ in range(h):
     input().split()
 print(15, 8)
+
 
 def add_mssp_from_mine(numbers, mssp):
     for num in numbers:
         unknown_edges, unknown_edges_len = get_unknowns(num.neighbors_edge)
-        mine_neighbor_edge, mine_neighbor_edge_len = get_mines(num.neighbors_edge)
+        _, mine_neighbor_edge_len = get_mines(
+            num.neighbors_edge)
         if num.value - mine_neighbor_edge_len == 1 and unknown_edges_len in [2, 3]:
             one_in_multi = frozenset(unknown_edges)
             mssp[one_in_multi] = unknown_edges_len
 
+
 def fill_safe_with_mine(numbers, mssp):
     # fill safe with mine
     for num in numbers:
-        mine_neighbor_edge, mine_neighbor_edge_len = get_mines(num.neighbors_edge)
+        mine_neighbor_edge, mine_neighbor_edge_len = get_mines(
+            num.neighbors_edge)
         if mine_neighbor_edge_len == num.value:
             for n in num.neighbors_edge:
                 if n.type != Type.MINE:
                     n.type = Type.SAFE
         # fill safe, mine by dssp
-        neighbors_edge_combinations = list(itertools.combinations(num.neighbors_edge, 2)) + list(itertools.combinations(num.neighbors_edge, 3))
+        neighbors_edge_combinations = list(itertools.combinations(
+            num.neighbors_edge, 2)) + list(itertools.combinations(num.neighbors_edge, 3))
         for combination in neighbors_edge_combinations:
             frozenset_combination = frozenset(combination)
             if frozenset_combination in mssp:
                 if num.value - mine_neighbor_edge_len - 1 == 0 and \
-                    num.neighbors_edge_len - mssp[frozenset_combination] - mine_neighbor_edge_len >= 1:
+                        num.neighbors_edge_len - mssp[frozenset_combination] - mine_neighbor_edge_len >= 1:
                     print('safe', num, frozenset_combination, file=sys.stderr)
                     for n in frozenset(num.neighbors_edge) - frozenset_combination - frozenset(mine_neighbor_edge):
                         print(
                             combination,
-                            "safe from combinations_of_" + str(mssp[frozenset_combination]),
+                            "safe from combinations_of_" +
+                            str(mssp[frozenset_combination]),
                             n,
                             file=sys.stderr
                         )
                         n.type = Type.SAFE
                 if num.value - mine_neighbor_edge_len - 1 == 1 and \
-                    num.neighbors_edge_len - mssp[frozenset_combination] - mine_neighbor_edge_len == 1:
+                        num.neighbors_edge_len - mssp[frozenset_combination] - mine_neighbor_edge_len == 1:
                     print('mine', num, frozenset_combination, file=sys.stderr)
                     for n in frozenset(num.neighbors_edge) - frozenset_combination:
                         n.type = Type.MINE
                         print(
                             combination,
-                            "mine from combinations_of_" + str(mssp[frozenset_combination]),
+                            "mine from combinations_of_" +
+                            str(mssp[frozenset_combination]),
                             n,
                             file=sys.stderr
                         )
+
+
+def fill_mine_with_safe(numbers):
+    for num in numbers:
+        _, safe_neighbor_edge_len = get_safes(
+            num.neighbors_edge)
+        if num.neighbors_edge_len - safe_neighbor_edge_len == num.value:
+            for n in num.neighbors_edge:
+                if n.type != Type.SAFE:
+                    n.type = Type.MINE
 
 
 def find_safe(numbers):
@@ -136,37 +153,12 @@ def find_safe(numbers):
             for n in num.neighbors_edge:
                 n.type = Type.MINE
 
-    # multi set single point: there's a mine belong multi square
-    mssp = {}
-    add_mssp_from_mine(numbers, mssp)
-
-    fill_safe_with_mine(numbers, mssp)
-
-    # fill mine from safe
-    for num in numbers:
-        safe_neighbor_edge, safe_neighbor_edge_len = get_safes(num.neighbors_edge)
-        if num.neighbors_edge_len - safe_neighbor_edge_len == num.value:
-            for n in num.neighbors_edge:
-                if n.type != Type.SAFE:
-                    n.type = Type.MINE
-
-    mssp = {}
-    add_mssp_from_mine(numbers, mssp)
-    
-    fill_safe_with_mine(numbers, mssp)
-
-    # fill mine from safe
-    for num in numbers:
-        safe_neighbor_edge, safe_neighbor_edge_len = get_safes(num.neighbors_edge)
-        if num.neighbors_edge_len - safe_neighbor_edge_len == num.value:
-            for n in num.neighbors_edge:
-                if n.type != Type.SAFE:
-                    n.type = Type.MINE
-
-    mssp = {}
-    add_mssp_from_mine(numbers, mssp)
-    
-    fill_safe_with_mine(numbers, mssp)
+    for _ in range(5):  # dept
+        # multi set single point: there's a mine belong multi square
+        mssp = {}
+        add_mssp_from_mine(numbers, mssp)
+        fill_safe_with_mine(numbers, mssp)
+        fill_mine_with_safe(numbers)
 
     # mine edge
     mine_edges = list(filter(is_mine, edges))
