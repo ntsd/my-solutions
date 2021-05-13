@@ -13,12 +13,26 @@ import (
 	"strings"
 )
 
-var TREE_SEED = 0
-var TREE_SMALL = 1
-var TREE_MEDIUM = 2
-var TREE_TALL = 3
+const RICHNESS_NULL = 0
+const RICHNESS_POOR = 1
+const RICHNESS_OK = 2
+const RICHNESS_LUSH = 3
+
+const TREE_SEED = 0
+const TREE_SMALL = 1
+const TREE_MEDIUM = 2
+const TREE_TALL = 3
+
 var TREE_BASE_COST = [4]int{0, 1, 3, 7}
-var LIFECYCLE_END_COST = 4
+
+const TREE_COST_SCALE = 1
+const LIFECYCLE_END_COST = 4
+const DURATION_ACTION_PHASE = 1000
+const DURATION_GATHER_PHASE = 2000
+const DURATION_SUNMOVE_PHASE = 1000
+const STARTING_TREE_COUNT = 2
+const RICHNESS_BONUS_OK = 2
+const RICHNESS_BONUS_LUSH = 4
 
 type Cell struct {
 	Index     int
@@ -27,9 +41,9 @@ type Cell struct {
 }
 
 type Tree struct {
-	CellId  int
-	Size    int
-	OwnerID int
+	CellID  int
+	Size    int // size -1 = no tree
+	OwnerID int // ownerID -1 = no tree
 	Dormant bool
 }
 
@@ -67,8 +81,8 @@ type Player struct {
 
 type Game struct {
 	// Public members are used by the scoring function and running the game.
-	JustMovedPlayerId uint64 // Who just moved, if they took the last chip they win.
-	ActivePlayerId    uint64 // This is the player who's current turn it is.
+	JustMovedPlayerId int // Who just moved, if they took the last chip they win.
+	ActivePlayerId    int // This is the player who's current turn it is.
 
 	// current game state from input
 	Day               int
@@ -80,7 +94,7 @@ type Game struct {
 	OpponentIsWaiting bool
 
 	// hidden game state
-	DyingTrees []Tree
+	DyingTrees []int
 }
 
 func (game *Game) move() {
@@ -98,10 +112,19 @@ func (game *Game) move() {
 }
 
 // evalScore evaluation scores the game state from a player's perspective, returning 0.0 (lost), 0.5 (in progress), 1.0 (won)
-func evalScore(playerID uint64, state GameState) float64 {
-	// TODO score
-	return 0.5
+func evalScore(playerID int, state GameState) float64 {
+	// TODO evaluation score
+	var game *Game = state.(*Game)
+	var opponentId = getOpponentId(playerID)
+	return float64(game.Players[playerID].Score - game.Players[opponentId].Score)
 }
+
+func getOpponentId(playerID int) int {
+	return int(math.Abs(float64(playerID - 1)))
+}
+
+// RandomizeUnknowns has no effect since Nim has no random hidden information.
+func (g *Game) RandomizeUnknowns() {}
 
 // Clone makes a deep copy of the game state.
 func (g *Game) Clone() GameState {
@@ -113,7 +136,11 @@ func (g *Game) Clone() GameState {
 
 // AvailableMoves returns all the available moves.
 func (g *Game) AvailableMoves() []Move {
+	var actions []Action
 	var moves []Move
+
+	actions = append(actions, Action{ActionTypeWait, 0, 0}) // add wait
+
 	// TODO get all avaliable moves
 	return moves
 }
@@ -127,20 +154,52 @@ func (g *Game) MakeMove(move Move) {
 	g.doAction(action)
 
 	g.updatePlayerTurn()
+
+	// Update round
+	if g.JustMovedPlayerId == 1 {
+		g.removeDyingTrees()
+		g.performSunGatheringUpdate()
+		g.performSunMoveUpdate()
+	}
 }
 
 func (g *Game) updatePlayerTurn() {
 	g.JustMovedPlayerId = g.ActivePlayerId
-	// There are only two players so whichever player is not active should be the new active player.
-	if g.ActivePlayerId == 0 {
-		g.ActivePlayerId = 1
-		return
-	}
-	g.ActivePlayerId = 0
+	g.ActivePlayerId = getOpponentId(g.ActivePlayerId)
 }
 
-// RandomizeUnknowns has no effect since Nim has no random hidden information.
-func (g *Game) RandomizeUnknowns() {}
+func (g *Game) performSunGatheringUpdate() {
+	for _, tree := range g.Trees {
+		tree.Dormant = false
+		// TODO shadow calculate
+		g.Players[tree.OwnerID].Score += tree.Size
+	}
+}
+
+func (g *Game) performSunMoveUpdate() {
+	g.Day++;
+	// TODO move sun
+}
+
+func (g *Game) removeDyingTrees() {
+	for _, dyingTreeIdx := range g.DyingTrees {
+		var cell = g.Board[dyingTreeIdx]
+		var dyingTree = g.Trees[dyingTreeIdx]
+		var points = game.Nutrients
+		if cell.Richness == RICHNESS_OK {
+			points += RICHNESS_BONUS_OK
+		} else if cell.Richness == RICHNESS_LUSH {
+			points += RICHNESS_BONUS_LUSH
+		}
+		g.Players[dyingTree.OwnerID].Score += points
+
+		// remove tree
+		g.Trees[dyingTreeIdx] = Tree{dyingTreeIdx, -1, -1, false}
+
+		// update nutrients
+		g.Nutrients = int(math.Max(0, float64(g.Nutrients-1)))
+	}
+}
 
 // DoAction to update game state
 func (g *Game) doAction(action *Action) {
@@ -165,18 +224,19 @@ func (g *Game) doComplete(action *Action) {
 	var costOfGrowth = g.getGrowthCost(targetTree)
 	g.Players[g.ActivePlayerId].Sun -= costOfGrowth
 
-	// TODO add dying tree
+	g.DyingTrees = append(g.DyingTrees, targetTree.CellID)
+
 	targetTree.Dormant = true
 }
 
 func (g *Game) doSeed(action *Action) {
 	var sourceTree = g.Trees[action.SourceCell]
 
-	var costOfSeed = g.getCostFor(0, int(g.ActivePlayerId))
+	var costOfSeed = g.getCostFor(0, g.ActivePlayerId)
 	g.Players[g.ActivePlayerId].Sun -= costOfSeed
 
 	sourceTree.Dormant = true
-	g.Trees[action.TargetCell] = Tree{action.TargetCell, TREE_SEED, int(g.ActivePlayerId), false}
+	g.Trees[action.TargetCell] = Tree{action.TargetCell, TREE_SEED, g.ActivePlayerId, false}
 }
 
 func (g *Game) doGrow(action *Action) {
@@ -224,7 +284,6 @@ func main() {
 	game.Nutrients = 20
 	game.Board = make([]Cell, numberOfCells)
 	game.Trees = make([]Tree, numberOfCells) // tree index by cellIndex and size by numberOfCells
-	game.DyingTrees = []Tree{}
 
 	for i := 0; i < numberOfCells; i++ {
 		var index, richness, neigh0, neigh1, neigh2, neigh3, neigh4, neigh5 int
@@ -238,6 +297,7 @@ func main() {
 				neigh0, neigh1, neigh2, neigh3, neigh4, neigh5,
 			},
 		}
+		game.Trees[i] = Tree{i, -1, -1, false} // initial tree
 	}
 	for {
 		scanner.Scan()
@@ -262,7 +322,7 @@ func main() {
 			var _isMine, _isDormant, ownerID int
 			scanner.Scan()
 			fmt.Sscan(scanner.Text(), &cellIndex, &size, &_isMine, &_isDormant)
-			ownerID = int(math.Abs(float64(_isMine - 1)))
+			ownerID = getOpponentId(_isMine)
 			isDormant = _isDormant != 0
 
 			game.Trees[cellIndex] = Tree{cellIndex, size, ownerID, isDormant}
@@ -431,10 +491,10 @@ func (a byVisits) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byVisits) Less(i, j int) bool { return a[i].visits > a[j].visits }
 
 // Scorer is the function an AI can use to just the benifit of an outcome from the eyes of a particular player.
-type Scorer func(playerId uint64, state GameState) float64
+type Scorer func(playerId int, state GameState) float64
 
 // Uct is an Upper Confidence Bound Tree search through game stats for an optimal move, given a starting game state.
-func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playerId uint64, scorer Scorer) Move {
+func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playerId int, scorer Scorer) Move {
 
 	// Find the best move given a fixed number of state explorations.
 	var root *treeNode = newTreeNode(nil, nil, state, ucbC)
