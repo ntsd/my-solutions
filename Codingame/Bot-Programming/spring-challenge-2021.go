@@ -18,6 +18,7 @@ const RICHNESS_POOR = 1
 const RICHNESS_OK = 2
 const RICHNESS_LUSH = 3
 
+const TREE_NONE = -1
 const TREE_SEED = 0
 const TREE_SMALL = 1
 const TREE_MEDIUM = 2
@@ -33,6 +34,17 @@ const DURATION_SUNMOVE_PHASE = 1000
 const STARTING_TREE_COUNT = 2
 const RICHNESS_BONUS_OK = 2
 const RICHNESS_BONUS_LUSH = 4
+
+var directions = [][]int{ { 1, -1, 0 }, { +1, 0, -1 }, { 0, +1, -1 }, { -1, +1, 0 }, { -1, 0, +1 }, { 0, -1, +1 } };
+type CubeCoord struct {
+	X int
+	Y int
+	Z int
+}
+
+func newCubeCoord(x, y, z int) *CubeCoord {
+	return &CubeCoord{x, y, z}
+}
 
 type Cell struct {
 	Index     int
@@ -136,12 +148,22 @@ func (g *Game) Clone() GameState {
 
 // AvailableMoves returns all the available moves.
 func (g *Game) AvailableMoves() []Move {
+	activePlayerID := g.ActivePlayerId
 	var actions []Action
 	var moves []Move
 
 	actions = append(actions, Action{ActionTypeWait, 0, 0}) // add wait
 
 	// TODO get all avaliable moves
+	// For each tree, where they can seed.
+	// For each tree, if they can grow.
+	var seedCost = g.getCostFor(0, activePlayerID);
+	for _, tree := range g.Trees {
+		if tree.OwnerID == activePlayerID {
+			
+		}
+	}
+
 	return moves
 }
 
@@ -194,7 +216,7 @@ func (g *Game) removeDyingTrees() {
 		g.Players[dyingTree.OwnerID].Score += points
 
 		// remove tree
-		g.Trees[dyingTreeIdx] = Tree{dyingTreeIdx, -1, -1, false}
+		g.Trees[dyingTreeIdx] = Tree{dyingTreeIdx, TREE_NONE, -1, false}
 
 		// update nutrients
 		g.Nutrients = int(math.Max(0, float64(g.Nutrients-1)))
@@ -239,6 +261,15 @@ func (g *Game) doSeed(action *Action) {
 	g.Trees[action.TargetCell] = Tree{action.TargetCell, TREE_SEED, g.ActivePlayerId, false}
 }
 
+func (g *Game) playerCanSeedFrom(playerID int, tree Tree, seedCost int) bool {
+	return seedCost <= g.Players[playerID].Sun && tree.Size > TREE_SEED && !tree.Dormant
+}
+
+func (g *Game) playerCanSeedTo(cell Cell) bool {
+	// TODO check cell is valid
+	return cell.Richness != RICHNESS_NULL && g.Trees[cell.Index].Size == TREE_NONE
+}
+
 func (g *Game) doGrow(action *Action) {
 	var targetTree Tree = g.Trees[action.TargetCell]
 
@@ -267,6 +298,17 @@ func (g *Game) getCostFor(size, ownerID int) int {
 	}
 	return baseCost + sameTreeCount
 }
+
+// func (g *Game) getCoordsInRange(CubeCoord center, N int) {
+// 	List<CubeCoord> results = new ArrayList<>();
+// 	for (int x = -N; x <= +N; x++) {
+// 			for (int y = Math.max(-N, -x - N); y <= Math.min(+N, -x + N); y++) {
+// 					int z = -x - y;
+// 					results.add(cubeAdd(center, new CubeCoord(x, y, z)));
+// 			}
+// 	}
+// 	return results;
+// }
 
 var game Game
 
@@ -297,7 +339,7 @@ func main() {
 				neigh0, neigh1, neigh2, neigh3, neigh4, neigh5,
 			},
 		}
-		game.Trees[i] = Tree{i, -1, -1, false} // initial tree
+		game.Trees[i] = Tree{i, TREE_NONE, -1, false} // initial tree
 	}
 	for {
 		scanner.Scan()
