@@ -7,11 +7,9 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const MAX_ROUNDS = 24
@@ -156,7 +154,6 @@ type Game struct {
 	OpponentIsWaiting bool
 
 	// hidden game state
-	index          int // start with 0
 	DyingTrees     []int
 	Coords         []CubeCoord
 	CoordCellMaps  map[CubeCoord]*Cell
@@ -168,9 +165,9 @@ func (game *Game) move() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
 	// How many iterations do players take when considering moves?
-	var iterations uint = 500
+	var iterations uint = 10000
 	// How many simulations do players make when valuing the new moves?
-	var simulations uint = 2 * MAX_ROUNDS
+	var simulations uint = MAX_ROUNDS
 
 	// Run the simulation
 	var move Move = Uct(game, iterations, simulations, ucbC, 1, evalScore)
@@ -186,11 +183,11 @@ func evalScore(playerID int, state GameState) float64 {
 	var game *Game = state.(*Game)
 	var opponentID = getOpponentId(playerID)
 
-	var moves []Move = state.AvailableMoves()
-	if len(moves) > 0 {
-		// The game is still in progress.
-		return 0
-	}
+	// var moves []Move = state.AvailableMoves()
+	// if len(moves) > 0 {
+	// 	// The game is still in progress.
+	// 	return 0.0
+	// }
 	var score = float64(game.Players[playerID].Score - game.Players[opponentID].Score)
 	if score < 0 {
 		return 0.0
@@ -207,8 +204,34 @@ func (g *Game) RandomizeUnknowns() {}
 
 // Clone makes a deep copy of the game state.
 func (g *Game) Clone() GameState {
-	newGame := Copy(g)
-	return newGame.(*Game)
+	newGame := &Game{}
+
+	newGame.JustMovedPlayerId = g.JustMovedPlayerId
+	newGame.ActivePlayerId = g.ActivePlayerId
+
+	newGame.Day = g.Day
+	newGame.Nutrients = g.Nutrients
+
+	newGame.Cells = make([]*Cell, numberOfCells)
+	for i, v := range g.Cells {
+		newGame.Cells[i] = &*v
+	}
+	newGame.Trees = make([]*Tree, numberOfCells)
+	for i, v := range g.Trees {
+		newGame.Trees[i] = &*v
+	}
+	newGame.Players = make([]*Player, 2)
+	for i, v := range g.Players {
+		newGame.Players[i] = &*v
+	}
+	
+	newGame.DyingTrees = g.DyingTrees
+	newGame.Coords = g.Coords
+	newGame.CoordCellMaps = g.CoordCellMaps
+	newGame.Shadows = g.Shadows
+	newGame.sunOrientation = g.sunOrientation
+
+	return newGame
 }
 
 // AvailableMoves returns all the available moves.
@@ -419,16 +442,16 @@ func (g *Game) getCostFor(size, ownerID int) int {
 	return baseCost + sameTreeCount
 }
 
+var index = 0
 func (g *Game) generateCell(coord CubeCoord, richness int) {
-	g.Coords[g.index] = coord
-	g.CoordCellMaps[coord] = g.Cells[g.index]
-	g.index++
+	g.Coords[index] = coord
+	g.CoordCellMaps[coord] = g.Cells[index]
+	index++
 }
 
-func (g *Game) generateCoords(numberOfCells int) {
+func (g *Game) generateCoords() {
 	g.Coords = make([]CubeCoord, numberOfCells)
 	g.CoordCellMaps = make(map[CubeCoord]*Cell)
-	g.index = 0
 	centre := CubeCoord{0, 0, 0}
 	g.generateCell(centre, RICHNESS_LUSH)
 
@@ -464,12 +487,12 @@ func (g *Game) getCoordsInRange(center CubeCoord, N int) []CubeCoord {
 }
 
 var game Game
+var numberOfCells int
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 1000000), 1000000)
 
-	var numberOfCells int
 	scanner.Scan()
 	fmt.Sscan(scanner.Text(), &numberOfCells)
 
@@ -495,7 +518,7 @@ func main() {
 		game.Trees[index] = &Tree{index, TREE_NONE, -1, false} // initial tree
 	}
 
-	game.generateCoords(numberOfCells)
+	game.generateCoords()
 	game.Players = make([]*Player, 2)
 	game.Players[0] = &Player{}
 	game.Players[1] = &Player{}
@@ -756,113 +779,4 @@ func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playe
 
 func upperConfidenceBound(childAggregateOutcome float64, ucbC float64, parentVisits uint64, childVisits uint64) float64 {
 	return childAggregateOutcome/float64(childVisits) + ucbC*math.Sqrt(2*math.Log(float64(parentVisits))/float64(childVisits))
-}
-
-// DeepCopy
-// Copy creates a deep copy of whatever is passed to it and returns the copy
-// in an interface{}.  The returned value will need to be asserted to the
-// correct type.
-func Copy(src interface{}) interface{} {
-	if src == nil {
-		return nil
-	}
-
-	// Make the interface a reflect.Value
-	original := reflect.ValueOf(src)
-
-	// Make a copy of the same type as the original.
-	cpy := reflect.New(original.Type()).Elem()
-
-	// Recursively copy the original.
-	copyRecursive(original, cpy)
-
-	// Return the copy as an interface.
-	return cpy.Interface()
-}
-
-// copyRecursive does the actual copying of the interface. It currently has
-// limited support for what it can handle. Add as needed.
-// Interface for delegating copy process to type
-type Interface interface {
-	DeepCopy() interface{}
-}
-
-func copyRecursive(original, cpy reflect.Value) {
-	// check for implement deepcopy.Interface
-	if original.CanInterface() {
-		if copier, ok := original.Interface().(Interface); ok {
-			cpy.Set(reflect.ValueOf(copier.DeepCopy()))
-			return
-		}
-	}
-
-	// handle according to original's Kind
-	switch original.Kind() {
-	case reflect.Ptr:
-		// Get the actual value being pointed to.
-		originalValue := original.Elem()
-
-		// if  it isn't valid, return.
-		if !originalValue.IsValid() {
-			return
-		}
-		cpy.Set(reflect.New(originalValue.Type()))
-		copyRecursive(originalValue, cpy.Elem())
-
-	case reflect.Interface:
-		// If this is a nil, don't do anything
-		if original.IsNil() {
-			return
-		}
-		// Get the value for the interface, not the pointer.
-		originalValue := original.Elem()
-
-		// Get the value by calling Elem().
-		copyValue := reflect.New(originalValue.Type()).Elem()
-		copyRecursive(originalValue, copyValue)
-		cpy.Set(copyValue)
-
-	case reflect.Struct:
-		t, ok := original.Interface().(time.Time)
-		if ok {
-			cpy.Set(reflect.ValueOf(t))
-			return
-		}
-		// Go through each field of the struct and copy it.
-		for i := 0; i < original.NumField(); i++ {
-			// The Type's StructField for a given field is checked to see if StructField.PkgPath
-			// is set to determine if the field is exported or not because CanSet() returns false
-			// for settable fields.  I'm not sure why.  -mohae
-			if original.Type().Field(i).PkgPath != "" {
-				continue
-			}
-			copyRecursive(original.Field(i), cpy.Field(i))
-		}
-
-	case reflect.Slice:
-		if original.IsNil() {
-			return
-		}
-		// Make a new slice and copy each element.
-		cpy.Set(reflect.MakeSlice(original.Type(), original.Len(), original.Cap()))
-		for i := 0; i < original.Len(); i++ {
-			copyRecursive(original.Index(i), cpy.Index(i))
-		}
-
-	case reflect.Map:
-		if original.IsNil() {
-			return
-		}
-		cpy.Set(reflect.MakeMap(original.Type()))
-		for _, key := range original.MapKeys() {
-			originalValue := original.MapIndex(key)
-			copyValue := reflect.New(originalValue.Type()).Elem()
-			copyRecursive(originalValue, copyValue)
-			copyKey := Copy(key.Interface())
-			cpy.SetMapIndex(reflect.ValueOf(copyKey), copyValue)
-		}
-
-	default:
-		cpy.Set(original)
-	}
 }
