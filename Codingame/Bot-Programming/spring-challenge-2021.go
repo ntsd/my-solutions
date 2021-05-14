@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const MAX_ROUNDS = 24;
+const MAX_ROUNDS = 24
 const MAP_RING_COUNT = 3
 
 const RICHNESS_NULL = 0
@@ -168,9 +168,9 @@ func (game *Game) move() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
 	// How many iterations do players take when considering moves?
-	var iterations uint = 50
+	var iterations uint = 500
 	// How many simulations do players make when valuing the new moves?
-	var simulations uint = 100
+	var simulations uint = 2 * MAX_ROUNDS
 
 	// Run the simulation
 	var move Move = Uct(game, iterations, simulations, ucbC, 1, evalScore)
@@ -184,13 +184,18 @@ func (game *Game) move() {
 func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var game *Game = state.(*Game)
+	var opponentID = getOpponentId(playerID)
 
 	var moves []Move = state.AvailableMoves()
 	if len(moves) > 0 {
 		// The game is still in progress.
-		return 0 // Consider it a neutral state (0.0-1.0)
+		return 0
 	}
-	return float64(game.Players[playerID].Score)
+	var score = float64(game.Players[playerID].Score - game.Players[opponentID].Score)
+	if score < 0 {
+		return 0.0
+	}
+	return score
 }
 
 func getOpponentId(playerID int) int {
@@ -291,9 +296,9 @@ func (g *Game) calculateShadows() {
 			for i := 1; i <= tree.Size; i++ {
 				var tempCoord = coord.NeighborByDistance(g.sunOrientation, i)
 				var cell = g.CoordCellMaps[tempCoord]
-                if cell != nil {
-                    g.Shadows[cell.Index] = Max(g.Shadows[cell.Index], tree.Size)
-                }
+				if cell != nil {
+					g.Shadows[cell.Index] = Max(g.Shadows[cell.Index], tree.Size)
+				}
 			}
 		}
 	}
@@ -312,7 +317,7 @@ func (g *Game) performSunGatheringUpdate() {
 
 func (g *Game) performSunMoveUpdate() {
 	g.Day++
-	if (g.Day < MAX_ROUNDS) {
+	if g.Day < MAX_ROUNDS {
 		g.moveSunOrientation()
 		g.calculateShadows()
 	}
@@ -723,14 +728,11 @@ func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playe
 		// From the new child, make many simulated random steps to get a fuzzy idea of how good
 		// the move that created the child is.
 		var simulatedState GameState = node.state.Clone()
-
-		// What moves can further the game state?
-		var availableMoves []Move = simulatedState.AvailableMoves()
-
 		for j := 0; j < int(simulations); j++ {
 			// Randomize any part of the game state that is unkonwn to all the players (e.g. facedown cards).
 			simulatedState.RandomizeUnknowns()
-
+			// What moves can further the game state?
+			var availableMoves []Move = simulatedState.AvailableMoves()
 			// Is the game over?
 			if len(availableMoves) == 0 {
 				break
@@ -739,9 +741,6 @@ func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playe
 			var randomIndex int = rand.Intn(len(availableMoves))
 			var move Move = availableMoves[randomIndex]
 			simulatedState.MakeMove(move)
-
-			// Remove already simulate move
-			availableMoves = append(availableMoves[:randomIndex], availableMoves[randomIndex+1:]...)
 		}
 
 		// Backpropagate.
