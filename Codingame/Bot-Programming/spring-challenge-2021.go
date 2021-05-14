@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const MAX_ROUNDS = 24
@@ -164,13 +165,13 @@ type Game struct {
 func (game *Game) move() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
-	// How many iterations do players take when considering moves?
-	var iterations uint = 10000
+	// Timeout to simulate in nanosec
+	var timeout int64 = 90000000 // 90ms
 	// How many simulations do players make when valuing the new moves?
-	var simulations uint = MAX_ROUNDS
+	var simulations uint = 2 * MAX_ROUNDS
 
 	// Run the simulation
-	var move Move = Uct(game, iterations, simulations, ucbC, 1, evalScore)
+	var move Move = Uct(game, timeout, simulations, ucbC, 1, evalScore)
 	var action *Action = move.(*Action)
 	// TODO check is possible?
 	fmt.Println(action.String())
@@ -224,7 +225,7 @@ func (g *Game) Clone() GameState {
 	for i, v := range g.Players {
 		newGame.Players[i] = &*v
 	}
-	
+
 	newGame.DyingTrees = g.DyingTrees
 	newGame.Coords = g.Coords
 	newGame.CoordCellMaps = g.CoordCellMaps
@@ -350,19 +351,21 @@ func (g *Game) removeDyingTrees() {
 	for _, dyingTreeIdx := range g.DyingTrees {
 		var cell = g.Cells[dyingTreeIdx]
 		var dyingTree = g.Trees[dyingTreeIdx]
-		var points = game.Nutrients
-		if cell.Richness == RICHNESS_OK {
-			points += RICHNESS_BONUS_OK
-		} else if cell.Richness == RICHNESS_LUSH {
-			points += RICHNESS_BONUS_LUSH
+		if dyingTree.OwnerID != TREE_NONE {
+			var points = game.Nutrients
+			if cell.Richness == RICHNESS_OK {
+				points += RICHNESS_BONUS_OK
+			} else if cell.Richness == RICHNESS_LUSH {
+				points += RICHNESS_BONUS_LUSH
+			}
+			g.Players[dyingTree.OwnerID].Score += points
+
+			// remove tree
+			g.Trees[dyingTreeIdx] = &Tree{dyingTreeIdx, TREE_NONE, -1, false}
+
+			// update nutrients
+			g.Nutrients = Max(0, g.Nutrients-1)
 		}
-		g.Players[dyingTree.OwnerID].Score += points
-
-		// remove tree
-		g.Trees[dyingTreeIdx] = &Tree{dyingTreeIdx, TREE_NONE, -1, false}
-
-		// update nutrients
-		g.Nutrients = Max(0, g.Nutrients-1)
 	}
 	// Clear dying tree
 	g.DyingTrees = g.DyingTrees[:0]
@@ -443,6 +446,7 @@ func (g *Game) getCostFor(size, ownerID int) int {
 }
 
 var index = 0
+
 func (g *Game) generateCell(coord CubeCoord, richness int) {
 	g.Coords[index] = coord
 	g.CoordCellMaps[coord] = g.Cells[index]
@@ -724,12 +728,12 @@ func (n nilMove) Probability() float64 {
 }
 
 // Uct is an Upper Confidence Bound Tree search through game stats for an optimal move, given a starting game state.
-func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playerId int, scorer Scorer) Move {
+func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerId int, scorer Scorer) Move {
 
 	// Find the best move given a fixed number of state explorations.
 	var root *treeNode = newTreeNode(nil, nilMove{}, state, ucbC)
-	for i := 0; i < int(iterations); i++ {
-
+	var startTime = time.Now().UnixNano()
+	for {
 		// Start at the top of the tree again.
 		var node *treeNode = root
 
@@ -770,6 +774,9 @@ func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playe
 		// Our simulated state may be good or bad in the eyes of our player of interest.
 		var outcome float64 = scorer(playerId, simulatedState)
 		node.addOutcome(outcome) // Will internally propogate up the tree.
+		if time.Now().UnixNano()-startTime > timeout {
+			break
+		}
 	}
 
 	// The best move to take is going to be the root nodes most visited child.
