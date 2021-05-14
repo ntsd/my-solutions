@@ -119,7 +119,7 @@ type Action struct {
 	SourceCell int
 }
 
-func (a Action) String() string {
+func (a *Action) String() string {
 	switch a.Type {
 	case ActionTypeWait:
 		return "WAIT"
@@ -149,27 +149,28 @@ type Game struct {
 	Day               int
 	Nutrients         int
 	Cells             []*Cell
-	MyPossibleActions []Action // not used
+	MyPossibleActions []Action  // not used
 	Trees             []*Tree   // tree is index by cell ID
 	Players           []*Player // player 0 is me and 1 is opponent
 	OpponentIsWaiting bool
 
 	// hidden game state
-	index         int // start with 0
-	DyingTrees    []int
-	Coords        []CubeCoord
-	CoordCellMaps map[CubeCoord]*Cell
+	index          int // start with 0
+	DyingTrees     []int
+	Coords         []CubeCoord
+	CoordCellMaps  map[CubeCoord]*Cell
+	Shadows        map[int]int
+	sunOrientation int
 }
 
 func (game *Game) move() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
 	// How many iterations do players take when considering moves?
-	var iterations uint = 100
+	var iterations uint = 50
 	// How many simulations do players make when valuing the new moves?
 	var simulations uint = 100
 
-	fmt.Fprintln(os.Stderr, "Start Simulate")
 	// Run the simulation
 	var move Move = Uct(game, iterations, simulations, ucbC, 1, evalScore)
 	fmt.Println(move.(*Action).String())
@@ -181,7 +182,8 @@ func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var game *Game = state.(*Game)
 	var opponentId = getOpponentId(playerID)
-	return float64(game.Players[playerID].Score - game.Players[opponentId].Score)
+	var score = float64(game.Players[playerID].Score - game.Players[opponentId].Score)
+	return score
 }
 
 func getOpponentId(playerID int) int {
@@ -200,12 +202,11 @@ func (g *Game) Clone() GameState {
 // AvailableMoves returns all the available moves.
 func (g *Game) AvailableMoves() []Move {
 	activePlayerID := g.ActivePlayerId
-	var possibleActions []Action
+	var possibleActions []*Action
 	var moves []Move // MCTS move availables
 
-	possibleActions = append(possibleActions, Action{ActionTypeWait, 0, 0}) // add wait
+	possibleActions = append(possibleActions, &Action{ActionTypeWait, 0, 0}) // add wait
 
-	// TODO get all avaliable moves
 	// For each tree, where they can seed.
 	// For each tree, if they can grow.
 	var seedCost = g.getCostFor(0, activePlayerID)
@@ -216,7 +217,7 @@ func (g *Game) AvailableMoves() []Move {
 				for _, targetCoord := range g.getCoordsInRange(coord, tree.Size) {
 					targetCell := g.CoordCellMaps[targetCoord]
 					if g.playerCanSeedTo(targetCell) {
-						possibleActions = append(possibleActions, Action{ActionTypeSeed, targetCell.Index, tree.CellID})
+						possibleActions = append(possibleActions, &Action{ActionTypeSeed, targetCell.Index, tree.CellID})
 					}
 				}
 			}
@@ -224,16 +225,16 @@ func (g *Game) AvailableMoves() []Move {
 			growCost := g.getGrowthCost(tree)
 			if growCost <= g.Players[activePlayerID].Score && !tree.Dormant {
 				if tree.Size == TREE_TALL {
-					possibleActions = append(possibleActions, Action{ActionTypeComplete, tree.CellID, 0})
+					possibleActions = append(possibleActions, &Action{ActionTypeComplete, tree.CellID, 0})
 				} else {
-					possibleActions = append(possibleActions, Action{ActionTypeGrow, tree.CellID, 0})
+					possibleActions = append(possibleActions, &Action{ActionTypeGrow, tree.CellID, 0})
 				}
 			}
 		}
 	}
 
 	for _, possibleAction := range possibleActions {
-		moves = append(moves, &possibleAction)
+		moves = append(moves, possibleAction)
 	}
 
 	return moves
@@ -252,8 +253,8 @@ func (g *Game) MakeMove(move Move) {
 	// Update round
 	if g.JustMovedPlayerId == 1 {
 		g.removeDyingTrees()
-		g.performSunGatheringUpdate()
 		g.performSunMoveUpdate()
+		g.performSunGatheringUpdate()
 	}
 }
 
@@ -262,19 +263,46 @@ func (g *Game) updatePlayerTurn() {
 	g.ActivePlayerId = getOpponentId(g.ActivePlayerId)
 }
 
+func (g *Game) setSunOrientation(orientation int) {
+	g.sunOrientation = (orientation) % 6
+}
+
+func (g *Game) moveSunOrientation() {
+	g.sunOrientation = (g.sunOrientation + 1) % 6
+}
+
+func (g *Game) calculateShadows() {
+	// Clear shadows
+	g.Shadows = make(map[int]int)
+	for _, tree := range g.Trees {
+		if tree.Size != TREE_NONE {
+			var coord = g.Coords[tree.CellID]
+			for i := 1; i <= tree.Size; i++ {
+				var tempCoord = coord.NeighborByDistance(g.sunOrientation, i)
+				var cell = g.CoordCellMaps[tempCoord]
+                if cell != nil {
+                    g.Shadows[cell.Index] = Max(g.Shadows[cell.Index], tree.Size)
+                }
+			}
+		}
+	}
+}
+
 func (g *Game) performSunGatheringUpdate() {
 	for _, tree := range g.Trees {
 		tree.Dormant = false
-		// TODO shadow calculate
-        if tree.OwnerID != -1 {
-		    g.Players[tree.OwnerID].Score += tree.Size
-        }
+		if tree.OwnerID != TREE_NONE {
+			if g.Shadows[tree.CellID] == 0 || g.Shadows[tree.CellID] < tree.Size {
+				g.Players[tree.OwnerID].Score += tree.Size
+			}
+		}
 	}
 }
 
 func (g *Game) performSunMoveUpdate() {
 	g.Day++
-	// TODO move sun
+	g.moveSunOrientation()
+	g.calculateShadows()
 }
 
 func (g *Game) removeDyingTrees() {
@@ -295,8 +323,8 @@ func (g *Game) removeDyingTrees() {
 		// update nutrients
 		g.Nutrients = Max(0, g.Nutrients-1)
 	}
-    // Clear dying tree
-    g.DyingTrees = g.DyingTrees[:0]
+	// Clear dying tree
+	g.DyingTrees = g.DyingTrees[:0]
 }
 
 // DoAction to update game state
@@ -452,8 +480,8 @@ func main() {
 
 	game.generateCoords(numberOfCells)
 	game.Players = make([]*Player, 2)
-    game.Players[0] = &Player{}
-    game.Players[1] = &Player{}
+	game.Players[0] = &Player{}
+	game.Players[1] = &Player{}
 
 	for {
 		scanner.Scan()
