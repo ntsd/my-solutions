@@ -183,16 +183,16 @@ func evalScore(playerID int, state GameState) float64 {
 	var game *Game = state.(*Game)
 	var opponentId = getOpponentId(playerID)
 
-	if game.Day > 23 {
-		if game.Players[playerID].Score > game.Players[opponentId].Score {
-			return 1.0
-		}
-		return 0.0
-	}
-	return 0.5
+	// if game.Day > 23 {
+	// 	if game.Players[playerID].Score > game.Players[opponentId].Score {
+	// 		return 1.0
+	// 	}
+	// 	return 0.0
+	// }
+	// return 0.5
 
-	// var score = float64(game.Players[playerID].Score - game.Players[opponentId].Score)
-	// return score
+	var score = float64(game.Players[playerID].Score - game.Players[opponentId].Score)
+	return score
 }
 
 func getOpponentId(playerID int) int {
@@ -232,7 +232,7 @@ func (g *Game) AvailableMoves() []Move {
 			}
 
 			growCost := g.getGrowthCost(tree)
-			if growCost <= g.Players[activePlayerID].Score && !tree.Dormant {
+			if growCost <= g.Players[activePlayerID].Sun && !tree.Dormant {
 				if tree.Size == TREE_TALL {
 					possibleActions = append(possibleActions, &Action{ActionTypeComplete, tree.CellID, 0})
 				} else {
