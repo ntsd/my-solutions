@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+const MAX_ROUNDS = 24;
 const MAP_RING_COUNT = 3
 
 const RICHNESS_NULL = 0
@@ -173,7 +174,9 @@ func (game *Game) move() {
 
 	// Run the simulation
 	var move Move = Uct(game, iterations, simulations, ucbC, 1, evalScore)
-	fmt.Println(move.(*Action).String())
+	var action *Action = move.(*Action)
+	// TODO check is possible?
+	fmt.Println(action.String())
 	return
 }
 
@@ -181,18 +184,13 @@ func (game *Game) move() {
 func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var game *Game = state.(*Game)
-	var opponentId = getOpponentId(playerID)
 
-	// if game.Day > 23 {
-	// 	if game.Players[playerID].Score > game.Players[opponentId].Score {
-	// 		return 1.0
-	// 	}
-	// 	return 0.0
-	// }
-	// return 0.5
-
-	var score = float64(game.Players[playerID].Score - game.Players[opponentId].Score)
-	return score
+	var moves []Move = state.AvailableMoves()
+	if len(moves) > 0 {
+		// The game is still in progress.
+		return 0 // Consider it a neutral state (0.0-1.0)
+	}
+	return float64(game.Players[playerID].Score)
 }
 
 func getOpponentId(playerID int) int {
@@ -213,6 +211,10 @@ func (g *Game) AvailableMoves() []Move {
 	activePlayerID := g.ActivePlayerId
 	var possibleActions []*Action
 	var moves []Move // MCTS move availables
+
+	if g.Day >= MAX_ROUNDS { // No move if the game end
+		return moves
+	}
 
 	possibleActions = append(possibleActions, &Action{ActionTypeWait, 0, 0}) // add wait
 
@@ -310,8 +312,10 @@ func (g *Game) performSunGatheringUpdate() {
 
 func (g *Game) performSunMoveUpdate() {
 	g.Day++
-	g.moveSunOrientation()
-	g.calculateShadows()
+	if (g.Day < MAX_ROUNDS) {
+		g.moveSunOrientation()
+		g.calculateShadows()
+	}
 }
 
 func (g *Game) removeDyingTrees() {
@@ -338,7 +342,6 @@ func (g *Game) removeDyingTrees() {
 
 // DoAction to update game state
 func (g *Game) doAction(action *Action) {
-	// TODO change game state by action
 	switch action.Type {
 	case ActionTypeGrow:
 		g.doGrow(action)
