@@ -183,17 +183,19 @@ func (game *Game) move() {
 func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var game *Game = state.(*Game)
-	var opponentID = getOpponentId(playerID)
 
 	var moves []Move = state.AvailableMoves()
 	if len(moves) > 0 {
 		// The game is still in progress.
 		return 0.5
 	}
-	if game.Players[playerID].Score > game.Players[opponentID].Score {
-		return 1.0
-	}
-	return 0.0
+    // var opponentID = getOpponentId(0)
+	// if game.Players[0].Score > game.Players[opponentID].Score {
+	// 	return 1.0
+	// }
+	// return 0.0
+
+    return float64(game.Players[0].Score)
 
 	// var score = float64(game.Players[playerID].Score - game.Players[opponentID].Score)
 	// if score < 0 {
@@ -221,18 +223,21 @@ func (g *Game) Clone() GameState {
 
 	newGame.Cells = make([]*Cell, numberOfCells)
 	for i, v := range g.Cells {
+		newGame.Cells[i] = &Cell{}
 		byt, _ := json.Marshal(v)
-    json.Unmarshal(byt, newGame.Cells[i])
+		json.Unmarshal(byt, newGame.Cells[i])
 	}
 	newGame.Trees = make([]*Tree, numberOfCells)
 	for i, v := range g.Trees {
+		newGame.Trees[i] = &Tree{}
 		byt, _ := json.Marshal(v)
-    json.Unmarshal(byt, newGame.Trees[i])
+		json.Unmarshal(byt, newGame.Trees[i])
 	}
 	newGame.Players = make([]*Player, 2)
 	for i, v := range g.Players {
+		newGame.Players[i] = &Player{}
 		byt, _ := json.Marshal(v)
-    json.Unmarshal(byt, newGame.Players[i])
+		json.Unmarshal(byt, newGame.Players[i])
 	}
 
 	newGame.DyingTrees = g.DyingTrees
