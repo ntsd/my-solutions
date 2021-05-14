@@ -182,8 +182,17 @@ func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var game *Game = state.(*Game)
 	var opponentId = getOpponentId(playerID)
-	var score = float64(game.Players[playerID].Score - game.Players[opponentId].Score)
-	return score
+
+	if game.Day > 23 {
+		if game.Players[playerID].Score > game.Players[opponentId].Score {
+			return 1.0
+		}
+		return 0.0
+	}
+	return 0.5
+
+	// var score = float64(game.Players[playerID].Score - game.Players[opponentId].Score)
+	// return score
 }
 
 func getOpponentId(playerID int) int {
@@ -711,11 +720,14 @@ func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playe
 		// From the new child, make many simulated random steps to get a fuzzy idea of how good
 		// the move that created the child is.
 		var simulatedState GameState = node.state.Clone()
+
+		// What moves can further the game state?
+		var availableMoves []Move = simulatedState.AvailableMoves()
+
 		for j := 0; j < int(simulations); j++ {
 			// Randomize any part of the game state that is unkonwn to all the players (e.g. facedown cards).
 			simulatedState.RandomizeUnknowns()
-			// What moves can further the game state?
-			var availableMoves []Move = simulatedState.AvailableMoves()
+
 			// Is the game over?
 			if len(availableMoves) == 0 {
 				break
@@ -724,6 +736,9 @@ func Uct(state GameState, iterations uint, simulations uint, ucbC float64, playe
 			var randomIndex int = rand.Intn(len(availableMoves))
 			var move Move = availableMoves[randomIndex]
 			simulatedState.MakeMove(move)
+
+			// Remove already simulate move
+			availableMoves = append(availableMoves[:randomIndex], availableMoves[randomIndex+1:]...)
 		}
 
 		// Backpropagate.
