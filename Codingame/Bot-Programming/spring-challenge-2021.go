@@ -167,7 +167,7 @@ func (game *Game) move() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
 	// Timeout to simulate in nanosec
-	var timeout int64 = 90000000 // 90ms
+	var timeout int64 = 85000000 // 85ms
 	// How many simulations do players make when valuing the new moves?
 	var simulations uint = 2 * MAX_ROUNDS
 
@@ -183,25 +183,22 @@ func (game *Game) move() {
 func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var game *Game = state.(*Game)
+	// var opponentID = getOpponentId(playerID)
+	// if playerID == 1 {
+	//     return 0.0
+	// }
 
 	var moves []Move = state.AvailableMoves()
 	if len(moves) > 0 {
 		// The game is still in progress.
-		return 0.5
+		return 0.0
 	}
-    // var opponentID = getOpponentId(0)
-	// if game.Players[0].Score > game.Players[opponentID].Score {
-	// 	return 1.0
-	// }
-	// return 0.0
-
-    return float64(game.Players[0].Score)
-
-	// var score = float64(game.Players[playerID].Score - game.Players[opponentID].Score)
+	// var score = float64((game.Players[0].Score + game.Players[0].Sun/3) - (game.Players[1].Score + game.Players[1].Sun/3))
 	// if score < 0 {
 	// 	return 0.0
 	// }
-	// return score
+	var score = float64(game.Players[0].Score + game.Players[0].Sun/3)
+	return score
 }
 
 func getOpponentId(playerID int) int {
@@ -557,6 +554,11 @@ func main() {
 		var numberOfTrees int
 		scanner.Scan()
 		fmt.Sscan(scanner.Text(), &numberOfTrees)
+
+        // Reset trees
+		for i := 0; i < numberOfCells; i++ {
+			game.Trees[index] = &Tree{index, TREE_NONE, -1, false} // initial tree
+		}
 
 		for i := 0; i < numberOfTrees; i++ {
 			var cellIndex, size int
