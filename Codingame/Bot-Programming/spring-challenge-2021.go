@@ -148,17 +148,17 @@ type Game struct {
 	// current game state from input
 	Day               int
 	Nutrients         int
-	Cells             []Cell
-	MyPossibleActions []Action
-	Trees             []Tree   // tree is index by cell ID
-	Players           []Player // player 0 is me and 1 is opponent
+	Cells             []*Cell
+	MyPossibleActions []Action // not used
+	Trees             []*Tree   // tree is index by cell ID
+	Players           []*Player // player 0 is me and 1 is opponent
 	OpponentIsWaiting bool
 
 	// hidden game state
 	index         int // start with 0
 	DyingTrees    []int
 	Coords        []CubeCoord
-	CoordCellMaps map[CubeCoord]Cell
+	CoordCellMaps map[CubeCoord]*Cell
 }
 
 func (game *Game) move() {
@@ -245,7 +245,7 @@ func (g *Game) MakeMove(move Move) {
 	var action *Action = move.(*Action)
 
 	// do action to update game state
-	g.doAction(*action)
+	g.doAction(action)
 
 	g.updatePlayerTurn()
 
@@ -290,15 +290,17 @@ func (g *Game) removeDyingTrees() {
 		g.Players[dyingTree.OwnerID].Score += points
 
 		// remove tree
-		g.Trees[dyingTreeIdx] = Tree{dyingTreeIdx, TREE_NONE, -1, false}
+		g.Trees[dyingTreeIdx] = &Tree{dyingTreeIdx, TREE_NONE, -1, false}
 
 		// update nutrients
 		g.Nutrients = Max(0, g.Nutrients-1)
 	}
+    // Clear dying tree
+    g.DyingTrees = g.DyingTrees[:0]
 }
 
 // DoAction to update game state
-func (g *Game) doAction(action Action) {
+func (g *Game) doAction(action *Action) {
 	// TODO change game state by action
 	switch action.Type {
 	case ActionTypeGrow:
@@ -314,8 +316,8 @@ func (g *Game) doAction(action Action) {
 	}
 }
 
-func (g *Game) doComplete(action Action) {
-	var targetTree = g.Trees[action.TargetCell]
+func (g *Game) doComplete(action *Action) {
+	var targetTree *Tree = g.Trees[action.TargetCell]
 
 	var costOfGrowth = g.getGrowthCost(targetTree)
 	g.Players[g.ActivePlayerId].Sun -= costOfGrowth
@@ -325,27 +327,26 @@ func (g *Game) doComplete(action Action) {
 	targetTree.Dormant = true
 }
 
-func (g *Game) doSeed(action Action) {
+func (g *Game) doSeed(action *Action) {
 	var sourceTree = g.Trees[action.SourceCell]
 
 	var costOfSeed = g.getCostFor(0, g.ActivePlayerId)
 	g.Players[g.ActivePlayerId].Sun -= costOfSeed
 
 	sourceTree.Dormant = true
-	g.Trees[action.TargetCell] = Tree{action.TargetCell, TREE_SEED, g.ActivePlayerId, false}
+	g.Trees[action.TargetCell] = &Tree{action.TargetCell, TREE_SEED, g.ActivePlayerId, false}
 }
 
-func (g *Game) playerCanSeedFrom(playerID int, tree Tree, seedCost int) bool {
+func (g *Game) playerCanSeedFrom(playerID int, tree *Tree, seedCost int) bool {
 	return seedCost <= g.Players[playerID].Sun && tree.Size > TREE_SEED && !tree.Dormant
 }
 
-func (g *Game) playerCanSeedTo(cell Cell) bool {
-	// TODO check cell is valid
-	return cell.Richness != RICHNESS_NULL && g.Trees[cell.Index].Size == TREE_NONE
+func (g *Game) playerCanSeedTo(cell *Cell) bool {
+	return cell != nil && cell.Richness != RICHNESS_NULL && g.Trees[cell.Index].Size == TREE_NONE
 }
 
-func (g *Game) doGrow(action Action) {
-	var targetTree Tree = g.Trees[action.TargetCell]
+func (g *Game) doGrow(action *Action) {
+	var targetTree *Tree = g.Trees[action.TargetCell]
 
 	var costOfGrowth = g.getGrowthCost(targetTree)
 	g.Players[g.ActivePlayerId].Sun -= costOfGrowth
@@ -354,7 +355,7 @@ func (g *Game) doGrow(action Action) {
 	targetTree.Dormant = true
 }
 
-func (g *Game) getGrowthCost(targetTree Tree) int {
+func (g *Game) getGrowthCost(targetTree *Tree) int {
 	var targetSize = targetTree.Size + 1
 	if targetSize > TREE_TALL { // target > max size
 		return LIFECYCLE_END_COST // end tree cost is 4
@@ -381,7 +382,7 @@ func (g *Game) generateCell(coord CubeCoord, richness int) {
 
 func (g *Game) generateCoords(numberOfCells int) {
 	g.Coords = make([]CubeCoord, numberOfCells)
-	g.CoordCellMaps = make(map[CubeCoord]Cell)
+	g.CoordCellMaps = make(map[CubeCoord]*Cell)
 	g.index = 0
 	centre := CubeCoord{0, 0, 0}
 	g.generateCell(centre, RICHNESS_LUSH)
@@ -431,26 +432,28 @@ func main() {
 	game.JustMovedPlayerId = 1
 
 	game.Nutrients = 20
-	game.Cells = make([]Cell, numberOfCells)
-	game.Trees = make([]Tree, numberOfCells) // tree index by cellIndex and size by numberOfCells
+	game.Cells = make([]*Cell, numberOfCells)
+	game.Trees = make([]*Tree, numberOfCells) // tree index by cellIndex and size by numberOfCells
 
 	for i := 0; i < numberOfCells; i++ {
 		var index, richness, neigh0, neigh1, neigh2, neigh3, neigh4, neigh5 int
 		scanner.Scan()
 		fmt.Sscan(scanner.Text(), &index, &richness, &neigh0, &neigh1, &neigh2, &neigh3, &neigh4, &neigh5)
 
-		game.Cells[index] = Cell{
+		game.Cells[index] = &Cell{
 			index,
 			richness,
 			[]int{
 				neigh0, neigh1, neigh2, neigh3, neigh4, neigh5,
 			},
 		}
-		game.Trees[index] = Tree{index, TREE_NONE, -1, false} // initial tree
+		game.Trees[index] = &Tree{index, TREE_NONE, -1, false} // initial tree
 	}
 
 	game.generateCoords(numberOfCells)
-	game.Players = make([]Player, 2)
+	game.Players = make([]*Player, 2)
+    game.Players[0] = &Player{}
+    game.Players[1] = &Player{}
 
 	for {
 		scanner.Scan()
@@ -478,7 +481,7 @@ func main() {
 			ownerID = getOpponentId(_isMine)
 			isDormant = _isDormant != 0
 
-			game.Trees[cellIndex] = Tree{cellIndex, size, ownerID, isDormant}
+			game.Trees[cellIndex] = &Tree{cellIndex, size, ownerID, isDormant}
 		}
 
 		var numberOfPossibleMoves int
