@@ -361,7 +361,7 @@ func (g *Game) removeDyingTrees() {
 		g.Nutrients = Max(0, g.Nutrients-1)
 	}
 	// Clear dying tree
-	g.DyingTrees = g.DyingTrees[:0]
+	g.DyingTrees = []int{}
 }
 
 // DoAction to update game state
