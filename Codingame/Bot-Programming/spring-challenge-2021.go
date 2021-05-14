@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -184,16 +185,21 @@ func evalScore(playerID int, state GameState) float64 {
 	var game *Game = state.(*Game)
 	var opponentID = getOpponentId(playerID)
 
-	// var moves []Move = state.AvailableMoves()
-	// if len(moves) > 0 {
-	// 	// The game is still in progress.
+	var moves []Move = state.AvailableMoves()
+	if len(moves) > 0 {
+		// The game is still in progress.
+		return 0.5
+	}
+	if game.Players[playerID].Score > game.Players[opponentID].Score {
+		return 1.0
+	}
+	return 0.0
+
+	// var score = float64(game.Players[playerID].Score - game.Players[opponentID].Score)
+	// if score < 0 {
 	// 	return 0.0
 	// }
-	var score = float64(game.Players[playerID].Score - game.Players[opponentID].Score)
-	if score < 0 {
-		return 0.0
-	}
-	return score
+	// return score
 }
 
 func getOpponentId(playerID int) int {
@@ -215,15 +221,18 @@ func (g *Game) Clone() GameState {
 
 	newGame.Cells = make([]*Cell, numberOfCells)
 	for i, v := range g.Cells {
-		newGame.Cells[i] = &*v
+		byt, _ := json.Marshal(v)
+    json.Unmarshal(byt, newGame.Cells[i])
 	}
 	newGame.Trees = make([]*Tree, numberOfCells)
 	for i, v := range g.Trees {
-		newGame.Trees[i] = &*v
+		byt, _ := json.Marshal(v)
+    json.Unmarshal(byt, newGame.Trees[i])
 	}
 	newGame.Players = make([]*Player, 2)
 	for i, v := range g.Players {
-		newGame.Players[i] = &*v
+		byt, _ := json.Marshal(v)
+    json.Unmarshal(byt, newGame.Players[i])
 	}
 
 	newGame.DyingTrees = g.DyingTrees
