@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+const MAP_RING_COUNT = 3
+
 const RICHNESS_NULL = 0
 const RICHNESS_POOR = 1
 const RICHNESS_OK = 2
@@ -35,15 +37,57 @@ const STARTING_TREE_COUNT = 2
 const RICHNESS_BONUS_OK = 2
 const RICHNESS_BONUS_LUSH = 4
 
-var directions = [][]int{ { 1, -1, 0 }, { +1, 0, -1 }, { 0, +1, -1 }, { -1, +1, 0 }, { -1, 0, +1 }, { 0, -1, +1 } };
+var directions = [][]int{{1, -1, 0}, {+1, 0, -1}, {0, +1, -1}, {-1, +1, 0}, {-1, 0, +1}, {0, -1, +1}}
+
+func Max(x, y int) int {
+	return int(math.Max(float64(x), float64(y)))
+}
+
+func Min(x, y int) int {
+	return int(math.Min(float64(x), float64(y)))
+}
+
+func Abs(i int) int {
+	return int(math.Abs(float64(i)))
+}
+
+func IndexOf(element interface{}, data []interface{}) int {
+	for k, v := range data {
+		if element == v {
+			return k
+		}
+	}
+	return -1 //not found.
+}
+
 type CubeCoord struct {
 	X int
 	Y int
 	Z int
 }
 
-func newCubeCoord(x, y, z int) *CubeCoord {
-	return &CubeCoord{x, y, z}
+func (c *CubeCoord) Neighbor(orientation int) CubeCoord {
+	return c.NeighborByDistance(orientation, 1)
+}
+
+func (c *CubeCoord) NeighborByDistance(orientation, distance int) CubeCoord {
+	var nx = c.X + directions[orientation][0]*distance
+	var ny = c.Y + directions[orientation][1]*distance
+	var nz = c.Z + directions[orientation][2]*distance
+
+	return CubeCoord{nx, ny, nz}
+}
+
+func (c *CubeCoord) DistanceTo(dst CubeCoord) int {
+	return Abs(c.X-dst.X) + Abs(c.Y-dst.Y) + Abs(c.Z-dst.Z)/2
+}
+
+func (a *CubeCoord) Add(b CubeCoord) CubeCoord {
+	return CubeCoord{a.X + b.X, a.Y + b.Y, a.Z + b.Z}
+}
+
+func newCubeCoord(x, y, z int) CubeCoord {
+	return CubeCoord{x, y, z}
 }
 
 type Cell struct {
@@ -99,14 +143,17 @@ type Game struct {
 	// current game state from input
 	Day               int
 	Nutrients         int
-	Board             []Cell
+	Cells             []Cell
 	MyPossibleActions []Action
 	Trees             []Tree   // tree is index by cell ID
 	Players           []Player // player 0 is me and 1 is opponent
 	OpponentIsWaiting bool
 
 	// hidden game state
-	DyingTrees []int
+	index         int // start with 0
+	DyingTrees    []int
+	Coords        []CubeCoord
+	CoordCellMaps map[CubeCoord]Cell
 }
 
 func (game *Game) move() {
@@ -132,7 +179,7 @@ func evalScore(playerID int, state GameState) float64 {
 }
 
 func getOpponentId(playerID int) int {
-	return int(math.Abs(float64(playerID - 1)))
+	return Abs(playerID - 1)
 }
 
 // RandomizeUnknowns has no effect since Nim has no random hidden information.
@@ -149,19 +196,42 @@ func (g *Game) Clone() GameState {
 // AvailableMoves returns all the available moves.
 func (g *Game) AvailableMoves() []Move {
 	activePlayerID := g.ActivePlayerId
-	var actions []Action
-	var moves []Move
+	var possibleActions []Action
+	var moves []Move // MCTS move availables
 
-	actions = append(actions, Action{ActionTypeWait, 0, 0}) // add wait
+	possibleActions = append(possibleActions, Action{ActionTypeWait, 0, 0}) // add wait
 
 	// TODO get all avaliable moves
 	// For each tree, where they can seed.
 	// For each tree, if they can grow.
-	var seedCost = g.getCostFor(0, activePlayerID);
+	var seedCost = g.getCostFor(0, activePlayerID)
 	for _, tree := range g.Trees {
 		if tree.OwnerID == activePlayerID {
-			
+			var coord = g.Coords[tree.CellID]
+			if g.playerCanSeedFrom(activePlayerID, tree, seedCost) {
+				for _, targetCoord := range g.getCoordsInRange(coord, tree.Size) {
+					targetCell := g.CoordCellMaps[targetCoord]
+					if g.playerCanSeedTo(targetCell) {
+						possibleActions = append(possibleActions, Action{ActionTypeSeed, tree.CellID, targetCell.Index})
+					}
+				}
+			}
+
+			growCost := g.getGrowthCost(tree)
+			if growCost <= g.Players[activePlayerID].Score && !tree.Dormant {
+				if tree.Size == TREE_TALL {
+					possibleActions = append(possibleActions, Action{ActionTypeComplete, tree.CellID, 0})
+				} else {
+					possibleActions = append(possibleActions, Action{ActionTypeGrow, tree.CellID, 0})
+				}
+			}
 		}
+	}
+
+    fmt.Println(possibleActions)
+
+	for _, possibleAction := range possibleActions {
+		moves = append(moves, &possibleAction)
 	}
 
 	return moves
@@ -173,7 +243,7 @@ func (g *Game) MakeMove(move Move) {
 	var action *Action = move.(*Action)
 
 	// do action to update game state
-	g.doAction(action)
+	g.doAction(*action)
 
 	g.updatePlayerTurn()
 
@@ -199,13 +269,13 @@ func (g *Game) performSunGatheringUpdate() {
 }
 
 func (g *Game) performSunMoveUpdate() {
-	g.Day++;
+	g.Day++
 	// TODO move sun
 }
 
 func (g *Game) removeDyingTrees() {
 	for _, dyingTreeIdx := range g.DyingTrees {
-		var cell = g.Board[dyingTreeIdx]
+		var cell = g.Cells[dyingTreeIdx]
 		var dyingTree = g.Trees[dyingTreeIdx]
 		var points = game.Nutrients
 		if cell.Richness == RICHNESS_OK {
@@ -219,12 +289,12 @@ func (g *Game) removeDyingTrees() {
 		g.Trees[dyingTreeIdx] = Tree{dyingTreeIdx, TREE_NONE, -1, false}
 
 		// update nutrients
-		g.Nutrients = int(math.Max(0, float64(g.Nutrients-1)))
+		g.Nutrients = Max(0, g.Nutrients-1)
 	}
 }
 
 // DoAction to update game state
-func (g *Game) doAction(action *Action) {
+func (g *Game) doAction(action Action) {
 	// TODO change game state by action
 	switch action.Type {
 	case ActionTypeGrow:
@@ -240,7 +310,7 @@ func (g *Game) doAction(action *Action) {
 	}
 }
 
-func (g *Game) doComplete(action *Action) {
+func (g *Game) doComplete(action Action) {
 	var targetTree = g.Trees[action.TargetCell]
 
 	var costOfGrowth = g.getGrowthCost(targetTree)
@@ -251,7 +321,7 @@ func (g *Game) doComplete(action *Action) {
 	targetTree.Dormant = true
 }
 
-func (g *Game) doSeed(action *Action) {
+func (g *Game) doSeed(action Action) {
 	var sourceTree = g.Trees[action.SourceCell]
 
 	var costOfSeed = g.getCostFor(0, g.ActivePlayerId)
@@ -270,7 +340,7 @@ func (g *Game) playerCanSeedTo(cell Cell) bool {
 	return cell.Richness != RICHNESS_NULL && g.Trees[cell.Index].Size == TREE_NONE
 }
 
-func (g *Game) doGrow(action *Action) {
+func (g *Game) doGrow(action Action) {
 	var targetTree Tree = g.Trees[action.TargetCell]
 
 	var costOfGrowth = g.getGrowthCost(targetTree)
@@ -299,16 +369,49 @@ func (g *Game) getCostFor(size, ownerID int) int {
 	return baseCost + sameTreeCount
 }
 
-// func (g *Game) getCoordsInRange(CubeCoord center, N int) {
-// 	List<CubeCoord> results = new ArrayList<>();
-// 	for (int x = -N; x <= +N; x++) {
-// 			for (int y = Math.max(-N, -x - N); y <= Math.min(+N, -x + N); y++) {
-// 					int z = -x - y;
-// 					results.add(cubeAdd(center, new CubeCoord(x, y, z)));
-// 			}
-// 	}
-// 	return results;
-// }
+func (g *Game) generateCell(coord CubeCoord, richness int) {
+	g.Coords[g.index] = coord
+	g.CoordCellMaps[coord] = g.Cells[g.index]
+	g.index++
+}
+
+func (g *Game) generateCoords(numberOfCells int) {
+    g.Coords = make([]CubeCoord, numberOfCells)
+	g.CoordCellMaps = make(map[CubeCoord]Cell)
+	g.index = 0
+	centre := CubeCoord{0, 0, 0}
+	g.generateCell(centre, RICHNESS_LUSH)
+
+	coord := centre.Neighbor(0)
+
+	for distance := 1; distance <= MAP_RING_COUNT; distance++ {
+		for orientation := 0; orientation < 6; orientation++ {
+			for count := 0; count < distance; count++ {
+				if distance == MAP_RING_COUNT {
+					g.generateCell(coord, RICHNESS_POOR)
+				} else if distance == MAP_RING_COUNT-1 {
+					g.generateCell(coord, RICHNESS_OK)
+				} else {
+					g.generateCell(coord, RICHNESS_LUSH)
+				}
+				coord = coord.Neighbor((orientation + 2) % 6)
+			}
+		}
+		coord = coord.Neighbor(0)
+	}
+}
+
+func (g *Game) getCoordsInRange(center CubeCoord, N int) []CubeCoord {
+	var results []CubeCoord
+	for x := -N; x <= +N; x++ {
+		for y := Max(-N, -x-N); y <= Min(+N, -x+N); y++ {
+			z := -x - y
+			coord := center.Add(CubeCoord{x, y, z})
+			results = append(results, coord)
+		}
+	}
+	return results
+}
 
 var game Game
 
@@ -324,7 +427,7 @@ func main() {
 	game.JustMovedPlayerId = 1
 
 	game.Nutrients = 20
-	game.Board = make([]Cell, numberOfCells)
+	game.Cells = make([]Cell, numberOfCells)
 	game.Trees = make([]Tree, numberOfCells) // tree index by cellIndex and size by numberOfCells
 
 	for i := 0; i < numberOfCells; i++ {
@@ -332,15 +435,19 @@ func main() {
 		scanner.Scan()
 		fmt.Sscan(scanner.Text(), &index, &richness, &neigh0, &neigh1, &neigh2, &neigh3, &neigh4, &neigh5)
 
-		game.Board[i] = Cell{
+		game.Cells[index] = Cell{
 			index,
 			richness,
 			[]int{
 				neigh0, neigh1, neigh2, neigh3, neigh4, neigh5,
 			},
 		}
-		game.Trees[i] = Tree{i, TREE_NONE, -1, false} // initial tree
+		game.Trees[index] = Tree{index, TREE_NONE, -1, false} // initial tree
 	}
+
+	game.generateCoords(numberOfCells)
+    game.Players = make([]Player, 2)
+
 	for {
 		scanner.Scan()
 		fmt.Sscan(scanner.Text(), &game.Day)
