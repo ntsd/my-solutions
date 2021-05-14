@@ -51,10 +51,6 @@ func Min(x, y int) int {
 	return int(math.Min(float64(x), float64(y)))
 }
 
-func Abs(i int) int {
-	return int(math.Abs(float64(i)))
-}
-
 func IndexOf(element interface{}, data []interface{}) int {
 	for k, v := range data {
 		if element == v {
@@ -82,10 +78,6 @@ func (c *CubeCoord) NeighborByDistance(orientation, distance int) CubeCoord {
 	var nz = c.Z + directions[orientation][2]*distance
 
 	return CubeCoord{nx, ny, nz}
-}
-
-func (c *CubeCoord) DistanceTo(dst CubeCoord) int {
-	return Abs(c.X-dst.X) + Abs(c.Y-dst.Y) + Abs(c.Z-dst.Z)/2
 }
 
 func (a *CubeCoord) Add(b CubeCoord) CubeCoord {
@@ -245,14 +237,13 @@ func (g *Game) Clone() GameState {
 // AvailableMoves returns all the available moves.
 func (g *Game) AvailableMoves() []Move {
 	activePlayerID := g.ActivePlayerId
-	var possibleActions []*Action
 	var moves []Move // MCTS move availables
 
 	if g.Day >= MAX_ROUNDS { // No move if the game end
 		return moves
 	}
 
-	possibleActions = append(possibleActions, &Action{ActionTypeWait, 0, 0}) // add wait
+	moves = append(moves, &Action{ActionTypeWait, 0, 0}) // add wait
 
 	// For each tree, where they can seed.
 	// For each tree, if they can grow.
@@ -264,7 +255,7 @@ func (g *Game) AvailableMoves() []Move {
 				for _, targetCoord := range g.getCoordsInRange(coord, tree.Size) {
 					targetCell := g.CoordCellMaps[targetCoord]
 					if g.playerCanSeedTo(targetCell) {
-						possibleActions = append(possibleActions, &Action{ActionTypeSeed, targetCell.Index, tree.CellID})
+						moves = append(moves, &Action{ActionTypeSeed, targetCell.Index, tree.CellID})
 					}
 				}
 			}
@@ -272,16 +263,12 @@ func (g *Game) AvailableMoves() []Move {
 			growCost := g.getGrowthCost(tree)
 			if growCost <= g.Players[activePlayerID].Sun && !tree.Dormant {
 				if tree.Size == TREE_TALL {
-					possibleActions = append(possibleActions, &Action{ActionTypeComplete, tree.CellID, 0})
+					moves = append(moves, &Action{ActionTypeComplete, tree.CellID, 0})
 				} else {
-					possibleActions = append(possibleActions, &Action{ActionTypeGrow, tree.CellID, 0})
+					moves = append(moves, &Action{ActionTypeGrow, tree.CellID, 0})
 				}
 			}
 		}
-	}
-
-	for _, possibleAction := range possibleActions {
-		moves = append(moves, possibleAction)
 	}
 
 	return moves
