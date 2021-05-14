@@ -167,14 +167,13 @@ func (game *Game) move() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
 	// Timeout to simulate in nanosec
-	var timeout int64 = 85000000 // 85ms
+	var timeout int64 = 95000000 // 95ms
 	// How many simulations do players make when valuing the new moves?
 	var simulations uint = 2 * MAX_ROUNDS
 
 	// Run the simulation
 	var move Move = Uct(game, timeout, simulations, ucbC, 1, evalScore)
 	var action *Action = move.(*Action)
-	// TODO check is possible?
 	fmt.Println(action.String())
 	return
 }
@@ -184,25 +183,22 @@ func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var game *Game = state.(*Game)
 	// var opponentID = getOpponentId(playerID)
-	// if playerID == 1 {
-	//     return 0.0
-	// }
 
 	var moves []Move = state.AvailableMoves()
 	if len(moves) > 0 {
 		// The game is still in progress.
 		return 0.0
 	}
-	// var score = float64((game.Players[0].Score + game.Players[0].Sun/3) - (game.Players[1].Score + game.Players[1].Sun/3))
-	// if score < 0 {
-	// 	return 0.0
-	// }
-	var score = float64(game.Players[0].Score + game.Players[0].Sun/3)
+	var score = float64((game.Players[0].Score + game.Players[0].Sun/3) - (game.Players[1].Score + game.Players[1].Sun/3))
+	// var score = float64(game.Players[0].Score + game.Players[0].Sun/3)
 	return score
 }
 
 func getOpponentId(playerID int) int {
-	return Abs(playerID - 1)
+	if playerID == 1 {
+		return 0
+	}
+	return 1
 }
 
 // RandomizeUnknowns has no effect since Nim has no random hidden information.
@@ -362,21 +358,20 @@ func (g *Game) removeDyingTrees() {
 	for _, dyingTreeIdx := range g.DyingTrees {
 		var cell = g.Cells[dyingTreeIdx]
 		var dyingTree = g.Trees[dyingTreeIdx]
-		if dyingTree.OwnerID != TREE_NONE {
-			var points = game.Nutrients
-			if cell.Richness == RICHNESS_OK {
-				points += RICHNESS_BONUS_OK
-			} else if cell.Richness == RICHNESS_LUSH {
-				points += RICHNESS_BONUS_LUSH
-			}
-			g.Players[dyingTree.OwnerID].Score += points
-
-			// remove tree
-			g.Trees[dyingTreeIdx] = &Tree{dyingTreeIdx, TREE_NONE, -1, false}
-
-			// update nutrients
-			g.Nutrients = Max(0, g.Nutrients-1)
+		var points = game.Nutrients
+		if cell.Richness == RICHNESS_OK {
+			points += RICHNESS_BONUS_OK
+		} else if cell.Richness == RICHNESS_LUSH {
+			points += RICHNESS_BONUS_LUSH
 		}
+
+		g.Players[dyingTree.OwnerID].Score += points
+
+		// remove tree
+		g.Trees[dyingTreeIdx] = &Tree{dyingTreeIdx, TREE_NONE, -1, false}
+
+		// update nutrients
+		g.Nutrients = Max(0, g.Nutrients-1)
 	}
 	// Clear dying tree
 	g.DyingTrees = g.DyingTrees[:0]
@@ -555,9 +550,9 @@ func main() {
 		scanner.Scan()
 		fmt.Sscan(scanner.Text(), &numberOfTrees)
 
-        // Reset trees
+		// Reset trees
 		for i := 0; i < numberOfCells; i++ {
-			game.Trees[index] = &Tree{index, TREE_NONE, -1, false} // initial tree
+			game.Trees[i] = &Tree{i, TREE_NONE, -1, false} // initial tree
 		}
 
 		for i := 0; i < numberOfTrees; i++ {
