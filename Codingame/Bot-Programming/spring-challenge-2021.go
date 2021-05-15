@@ -81,11 +81,11 @@ func (c *CubeCoord) Neighbor(orientation int) CubeCoord {
 }
 
 func (c *CubeCoord) NeighborByDistance(orientation, distance int) CubeCoord {
-	var nx = c.X + directions[orientation][0]*distance
-	var ny = c.Y + directions[orientation][1]*distance
-	var nz = c.Z + directions[orientation][2]*distance
-
-	return CubeCoord{nx, ny, nz}
+	return CubeCoord{
+		c.X + directions[orientation][0]*distance,
+		c.Y + directions[orientation][1]*distance,
+		c.Z + directions[orientation][2]*distance,
+	}
 }
 
 func (a *CubeCoord) Add(b CubeCoord) CubeCoord {
@@ -182,11 +182,7 @@ func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var g *Game = state.(*Game)
 
-	var score = float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
-	if score < 0 {
-		return 0.0
-	}
-	return score
+	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
 }
 
 func getOpponentId(playerID int) int {
@@ -338,7 +334,7 @@ func (g *Game) performSunGatheringUpdate() {
 		tree.Dormant = false
 		if tree.OwnerID != TREE_NONE {
 			if g.Shadows[tree.CellID] == 0 || g.Shadows[tree.CellID] < tree.Size {
-				g.Players[tree.OwnerID].Score += tree.Size
+				g.Players[tree.OwnerID].Sun += tree.Size
 			}
 		}
 	}
@@ -403,9 +399,9 @@ func (g *Game) doComplete(action *Action) {
 
 func (g *Game) doSeed(action *Action) {
 	var sourceTree = g.Trees[action.SourceCell]
-	g.Players[g.ActivePlayerId].Sun -= g.getCostFor(0, g.ActivePlayerId)
-
 	sourceTree.Dormant = true
+
+	g.Players[g.ActivePlayerId].Sun -= g.getCostFor(0, g.ActivePlayerId)
 	g.Trees[action.TargetCell] = &Tree{action.TargetCell, TREE_SEED, g.ActivePlayerId, true}
 }
 
@@ -481,9 +477,7 @@ func (g *Game) getCoordsInRange(center CubeCoord, N int) []CubeCoord {
 	var results []CubeCoord
 	for x := -N; x <= +N; x++ {
 		for y := Max(-N, -x-N); y <= Min(+N, -x+N); y++ {
-			z := -x - y
-			var coord = center.Add(CubeCoord{x, y, z})
-			results = append(results, coord)
+			results = append(results, center.Add(CubeCoord{x, y, -x - y}))
 		}
 	}
 	return results
