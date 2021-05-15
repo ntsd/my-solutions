@@ -5,7 +5,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -164,7 +163,7 @@ func (game *Game) move() {
 	// Timeout to simulate in nanosec
 	var timeout int64 = 95000000 // 95ms
 	// How many simulations do players make when valuing the new moves?
-	var simulations uint = 4 * MAX_ROUNDS
+	var simulations uint = 8 * MAX_ROUNDS
 
 	// Run the simulation
 	var move Move = Uct(game, timeout, simulations, ucbC, 0, evalScore)
@@ -176,19 +175,8 @@ func (game *Game) move() {
 func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var g *Game = state.(*Game)
-	// var opponentID = getOpponentId(playerID)
 
-	// if g.Day <= MAX_ROUNDS-1 {
-	// 	return 0.0
-	// }
-	// var moves []Move = state.AvailableMoves()
-	// if len(moves) > 0 {
-	// 	// The game is still in progress.
-	// 	return 0.0
-	// }
 	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
-	// var score = float64(g.Players[0].Score + g.Players[0].Sun/3)
-	// return score
 }
 
 func getOpponentId(playerID int) int {
@@ -213,21 +201,27 @@ func (g *Game) Clone() GameState {
 
 	newGame.Cells = make([]*Cell, numberOfCells)
 	for i, v := range g.Cells {
-		newGame.Cells[i] = &Cell{}
-		byt, _ := json.Marshal(v)
-		json.Unmarshal(byt, newGame.Cells[i])
+		newGame.Cells[i] = &Cell{
+			Index:     v.Index,
+			Richness:  v.Richness,
+			Neighbors: v.Neighbors,
+		}
 	}
 	newGame.Trees = make([]*Tree, numberOfCells)
 	for i, v := range g.Trees {
-		newGame.Trees[i] = &Tree{}
-		byt, _ := json.Marshal(v)
-		json.Unmarshal(byt, newGame.Trees[i])
+		newGame.Trees[i] = &Tree{
+			CellID:  v.CellID,
+			Size:    v.Size,
+			OwnerID: v.OwnerID,
+			Dormant: v.Dormant,
+		}
 	}
 	newGame.Players = make([]*Player, 2)
 	for i, v := range g.Players {
-		newGame.Players[i] = &Player{}
-		byt, _ := json.Marshal(v)
-		json.Unmarshal(byt, newGame.Players[i])
+		newGame.Players[i] = &Player{
+			Sun:   v.Sun,
+			Score: v.Score,
+		}
 	}
 
 	newGame.DyingTrees = g.DyingTrees
