@@ -46,11 +46,17 @@ func Error(a ...interface{}) {
 }
 
 func Max(x, y int) int {
-	return int(math.Max(float64(x), float64(y)))
+	if x > y {
+		return x
+	}
+	return y
 }
 
 func Min(x, y int) int {
-	return int(math.Min(float64(x), float64(y)))
+	if x < y {
+		return x
+	}
+	return y
 }
 
 func IndexOf(element interface{}, data []interface{}) int {
