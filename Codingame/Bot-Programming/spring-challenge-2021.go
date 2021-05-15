@@ -182,6 +182,9 @@ func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var g *Game = state.(*Game)
 
+	if g.Day < MAX_ROUNDS-1 {
+		return 0.0
+	}
 	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
 }
 
@@ -244,7 +247,7 @@ func (g *Game) AvailableMoves() []Move {
 	activePlayerID := g.ActivePlayerId
 	var moves []Move // MCTS move availables
 
-	if g.Day > MAX_ROUNDS { // No move if the game end
+	if g.Day >= MAX_ROUNDS { // No move if the game end
 		return moves
 	}
 
