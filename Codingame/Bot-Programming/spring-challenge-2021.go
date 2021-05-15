@@ -164,12 +164,11 @@ func (game *Game) move() {
 	// Timeout to simulate in nanosec
 	var timeout int64 = 95000000 // 95ms
 	// How many simulations do players make when valuing the new moves?
-	var simulations uint = 2 * MAX_ROUNDS
+	var simulations uint = 4 * MAX_ROUNDS
 
 	// Run the simulation
-	var move Move = Uct(game, timeout, simulations, ucbC, 1, evalScore)
-	var action *Action = move.(*Action)
-	fmt.Println(action.String())
+	var move Move = Uct(game, timeout, simulations, ucbC, 0, evalScore)
+	fmt.Println(move.(*Action).String())
 	return
 }
 
@@ -179,17 +178,17 @@ func evalScore(playerID int, state GameState) float64 {
 	var g *Game = state.(*Game)
 	// var opponentID = getOpponentId(playerID)
 
-	// if g.Day <= MAX_ROUNDS - 1 {
-	//     return 0.0
+	// if g.Day <= MAX_ROUNDS-1 {
+	// 	return 0.0
 	// }
 	// var moves []Move = state.AvailableMoves()
 	// if len(moves) > 0 {
 	// 	// The game is still in progress.
 	// 	return 0.0
 	// }
-	var score = float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
+	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
 	// var score = float64(g.Players[0].Score + g.Players[0].Sun/3)
-	return score
+	// return score
 }
 
 func getOpponentId(playerID int) int {
