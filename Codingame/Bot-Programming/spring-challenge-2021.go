@@ -169,7 +169,7 @@ func (game *Game) move() {
 	// Timeout to simulate in nanosec
 	var timeout int64 = 95000000 // 95ms
 	// How many simulations do players make when valuing the new moves?
-	var simulations uint = 100 * MAX_ROUNDS // Game simulate should be end vefore
+	var simulations uint = 100 * MAX_ROUNDS
 
 	// Run the simulation
 	var move Move = Uct(game, timeout, simulations, ucbC, 0, evalScore)
@@ -191,9 +191,6 @@ func getOpponentId(playerID int) int {
 	}
 	return 1
 }
-
-// RandomizeUnknowns has no effect since Nim has no random hidden information.
-func (g *Game) RandomizeUnknowns() {}
 
 // Clone makes a deep copy of the game state.
 func (g *Game) Clone() GameState {
@@ -598,7 +595,6 @@ type GameState interface {
 	Clone() GameState       // Clone the game state, a deep copy.
 	AvailableMoves() []Move // Return all the viable moves given the current game state. For a finished game, nil.
 	MakeMove(move Move)     // Take an action, changing the game state.
-	RandomizeUnknowns()     // Any game state that is unknown (like order of cards), randomize.
 }
 
 // A node in the (action, state) game tree. Wins are from the veiwpoint of the player-just-moved.
@@ -756,8 +752,6 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 		// the move that created the child is.
 		var simulatedState GameState = node.state.Clone()
 		for j := 0; j < int(simulations); j++ {
-			// Randomize any part of the game state that is unkonwn to all the players (e.g. facedown cards).
-			simulatedState.RandomizeUnknowns()
 			// What moves can further the game state?
 			var availableMoves []Move = simulatedState.AvailableMoves()
 			// Is the game over?
