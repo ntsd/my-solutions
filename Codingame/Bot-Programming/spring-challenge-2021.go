@@ -1,3 +1,6 @@
+// TODO
+// spooky shadow
+
 package main
 
 import (
@@ -282,13 +285,15 @@ func (g *Game) MakeMove(move Move) {
 	// do action to update game state
 	g.doAction(action)
 
-	g.updatePlayerTurn()
+	if action.Type == ActionTypeWait {
+		g.updatePlayerTurn()
 
-	// Update round
-	if g.JustMovedPlayerId == 1 {
-		g.removeDyingTrees()
-		g.performSunMoveUpdate()
-		g.performSunGatheringUpdate()
+		// Update round
+		if g.JustMovedPlayerId == 1 {
+			g.removeDyingTrees()
+			g.performSunMoveUpdate()
+			g.performSunGatheringUpdate()
+		}
 	}
 }
 
@@ -298,7 +303,7 @@ func (g *Game) updatePlayerTurn() {
 }
 
 func (g *Game) setSunOrientation(orientation int) {
-	g.sunOrientation = (orientation) % 6
+	g.sunOrientation = orientation % 6
 }
 
 func (g *Game) moveSunOrientation() {
