@@ -352,7 +352,7 @@ func (g *Game) removeDyingTrees() {
 	for _, dyingTreeIdx := range g.DyingTrees {
 		var cell = g.Cells[dyingTreeIdx]
 		var dyingTree = g.Trees[dyingTreeIdx]
-		var points = game.Nutrients
+		var points = g.Nutrients
 		if cell.Richness == RICHNESS_OK {
 			points += RICHNESS_BONUS_OK
 		} else if cell.Richness == RICHNESS_LUSH {
