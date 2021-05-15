@@ -244,7 +244,7 @@ func (g *Game) AvailableMoves() []Move {
 	activePlayerID := g.ActivePlayerId
 	var moves []Move // MCTS move availables
 
-	if g.Day >= MAX_ROUNDS { // No move if the game end
+	if g.Day > MAX_ROUNDS { // No move if the game end
 		return moves
 	}
 
@@ -390,8 +390,7 @@ func (g *Game) doAction(action *Action) {
 func (g *Game) doComplete(action *Action) {
 	var targetTree *Tree = g.Trees[action.TargetCell]
 
-	var costOfGrowth = g.getGrowthCost(targetTree)
-	g.Players[g.ActivePlayerId].Sun -= costOfGrowth
+	g.Players[g.ActivePlayerId].Sun -= g.getGrowthCost(targetTree)
 
 	g.DyingTrees = append(g.DyingTrees, targetTree.CellID)
 
@@ -400,12 +399,10 @@ func (g *Game) doComplete(action *Action) {
 
 func (g *Game) doSeed(action *Action) {
 	var sourceTree = g.Trees[action.SourceCell]
-
-	var costOfSeed = g.getCostFor(0, g.ActivePlayerId)
-	g.Players[g.ActivePlayerId].Sun -= costOfSeed
+	g.Players[g.ActivePlayerId].Sun -= g.getCostFor(0, g.ActivePlayerId)
 
 	sourceTree.Dormant = true
-	g.Trees[action.TargetCell] = &Tree{action.TargetCell, TREE_SEED, g.ActivePlayerId, false}
+	g.Trees[action.TargetCell] = &Tree{action.TargetCell, TREE_SEED, g.ActivePlayerId, true}
 }
 
 func (g *Game) playerCanSeedFrom(playerID int, tree *Tree, seedCost int) bool {
@@ -418,9 +415,7 @@ func (g *Game) playerCanSeedTo(cell *Cell) bool {
 
 func (g *Game) doGrow(action *Action) {
 	var targetTree *Tree = g.Trees[action.TargetCell]
-
-	var costOfGrowth = g.getGrowthCost(targetTree)
-	g.Players[g.ActivePlayerId].Sun -= costOfGrowth
+	g.Players[g.ActivePlayerId].Sun -= g.getGrowthCost(g.Trees[action.TargetCell])
 
 	targetTree.Size += 1
 	targetTree.Dormant = true
