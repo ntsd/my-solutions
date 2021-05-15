@@ -46,17 +46,17 @@ func Error(a ...interface{}) {
 }
 
 func Max(x, y int) int {
-	if x > y {
-		return x
+	if x < y {
+		return y
 	}
-	return y
+	return x
 }
 
 func Min(x, y int) int {
-	if x < y {
-		return x
+	if x > y {
+		return y
 	}
-	return y
+	return x
 }
 
 func IndexOf(element interface{}, data []interface{}) int {
@@ -150,7 +150,7 @@ type Game struct {
 	Day               int
 	Nutrients         int
 	Cells             []*Cell
-	MyPossibleActions []Action  // not used
+	PossibleActions   []Action
 	Trees             []*Tree   // tree is index by cell ID
 	Players           []*Player // player 0 is me and 1 is opponent
 	OpponentIsWaiting bool
@@ -169,7 +169,7 @@ func (game *Game) move() {
 	// Timeout to simulate in nanosec
 	var timeout int64 = 95000000 // 95ms
 	// How many simulations do players make when valuing the new moves?
-	var simulations uint = 8 * MAX_ROUNDS
+	var simulations uint = 100 * MAX_ROUNDS // Game simulate should be end vefore
 
 	// Run the simulation
 	var move Move = Uct(game, timeout, simulations, ucbC, 0, evalScore)
@@ -182,10 +182,11 @@ func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var g *Game = state.(*Game)
 
-	if g.Day < MAX_ROUNDS-1 {
+	var score = float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
+	if score < 0 {
 		return 0.0
 	}
-	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
+	return score
 }
 
 func getOpponentId(playerID int) int {
@@ -247,7 +248,7 @@ func (g *Game) AvailableMoves() []Move {
 	activePlayerID := g.ActivePlayerId
 	var moves []Move // MCTS move availables
 
-	if g.Day >= MAX_ROUNDS { // No move if the game end
+	if g.Day > MAX_ROUNDS { // No move if the game end
 		return moves
 	}
 
@@ -481,7 +482,7 @@ func (g *Game) getCoordsInRange(center CubeCoord, N int) []CubeCoord {
 	for x := -N; x <= +N; x++ {
 		for y := Max(-N, -x-N); y <= Min(+N, -x+N); y++ {
 			z := -x - y
-			coord := center.Add(CubeCoord{x, y, z})
+			var coord = center.Add(CubeCoord{x, y, z})
 			results = append(results, coord)
 		}
 	}
@@ -492,6 +493,8 @@ var game Game
 var numberOfCells int
 
 func main() {
+	// rand.Seed(1)
+
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 1000000), 1000000)
 
@@ -563,7 +566,7 @@ func main() {
 		scanner.Scan()
 		fmt.Sscan(scanner.Text(), &numberOfPossibleMoves)
 
-		game.MyPossibleActions = make([]Action, numberOfPossibleMoves)
+		game.PossibleActions = make([]Action, numberOfPossibleMoves)
 		for i := 0; i < numberOfPossibleMoves; i++ {
 			scanner.Scan()
 			possibleMove := scanner.Text()
@@ -582,7 +585,7 @@ func main() {
 			default:
 				panic(fmt.Sprintf("Unexpected action '%s'.", toks[0]))
 			}
-			game.MyPossibleActions[i] = action
+			game.PossibleActions[i] = action
 		}
 
 		game.move()
