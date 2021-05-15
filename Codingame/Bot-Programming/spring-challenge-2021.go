@@ -176,16 +176,19 @@ func (game *Game) move() {
 // evalScore evaluation scores the game state from a player's perspective, returning 0.0 (lost), 0.5 (in progress), 1.0 (won)
 func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
-	var game *Game = state.(*Game)
+	var g *Game = state.(*Game)
 	// var opponentID = getOpponentId(playerID)
 
-	var moves []Move = state.AvailableMoves()
-	if len(moves) > 0 {
-		// The game is still in progress.
-		return 0.0
-	}
-	var score = float64((game.Players[0].Score + game.Players[0].Sun/3) - (game.Players[1].Score + game.Players[1].Sun/3))
-	// var score = float64(game.Players[0].Score + game.Players[0].Sun/3)
+	// if g.Day <= MAX_ROUNDS - 1 {
+	//     return 0.0
+	// }
+	// var moves []Move = state.AvailableMoves()
+	// if len(moves) > 0 {
+	// 	// The game is still in progress.
+	// 	return 0.0
+	// }
+	var score = float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
+	// var score = float64(g.Players[0].Score + g.Players[0].Sun/3)
 	return score
 }
 
