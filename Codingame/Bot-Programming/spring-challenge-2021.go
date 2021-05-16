@@ -448,12 +448,13 @@ var numberOfCells int
 var Cells []*Cell
 var Coords []CubeCoord // TODO test this
 var CoordCellMaps map[CubeCoord]*Cell
-var index = 0
+var cellIndex = 0
 
 func generateCell(coord CubeCoord, richness int) {
-	Coords[index] = coord
-	CoordCellMaps[coord] = Cells[index]
-	index++
+	Coords[cellIndex] = coord
+	CoordCellMaps[coord] = Cells[cellIndex]
+	// Error(cellIndex, Coords[cellIndex], CoordCellMaps[coord], Cells[cellIndex], Cells[cellIndex].Neighbors)
+	cellIndex++
 }
 
 func generateCoords() {
@@ -491,9 +492,6 @@ func (g *Game) getCoordsInRange(center CubeCoord, N int) []CubeCoord {
 
 func main() {
 	// rand.Seed(1)
-	Cells = make([]*Cell, numberOfCells)
-	Coords = make([]CubeCoord, numberOfCells)
-	CoordCellMaps = make(map[CubeCoord]*Cell)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 1000000), 1000000)
@@ -503,6 +501,10 @@ func main() {
 
 	game.ActivePlayerId = 0
 	game.JustMovedPlayerId = 1
+
+	Cells = make([]*Cell, numberOfCells)
+	Coords = make([]CubeCoord, numberOfCells)
+	CoordCellMaps = make(map[CubeCoord]*Cell)
 
 	game.Nutrients = 20
 	game.Trees = make([]*Tree, numberOfCells) // tree index by cellIndex and size by numberOfCells
