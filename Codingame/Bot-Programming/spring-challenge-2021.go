@@ -159,26 +159,52 @@ type Game struct {
 	SunOrientation int
 }
 
-func (game *Game) move() {
+func (g *Game) move() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
 	// Timeout to simulate in nanosec
 	var timeout int64 = 95000000 // 95ms
-	// How many simulations do players make when valuing the new moves?
-	var simulations uint = 100 * MAX_ROUNDS
 
-	// Run the simulation
-	var move Move = Uct(game, timeout, simulations, ucbC, 0, evalScore)
+	if g.Day < 15 {
+		var simulations uint = 10
+		var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreStart)
+		fmt.Println(move.(*Action).String())
+		return
+	}
+	var simulations uint = 100 * MAX_ROUNDS
+	var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreEnd)
 	fmt.Println(move.(*Action).String())
 	return
 }
 
-// evalScore evaluation scores the game state from a player's perspective, returning 0.0 (lost), 0.5 (in progress), 1.0 (won)
-func evalScore(playerID int, state GameState) float64 {
+func calculateSunPerday(g *Game, playerId int) int {
+	var sun = 0
+	for _, tree := range g.Trees {
+		if tree.OwnerID == playerId {
+			if g.Shadows[tree.CellID] == 0 || g.Shadows[tree.CellID] < tree.Size {
+				sun += tree.Size
+			}
+		}
+	}
+	return sun
+}
+
+// evalScoreStart evaluation scores the game state from a player's perspective, returning 0.0 (lost), 0.5 (in progress), 1.0 (won)
+func evalScoreStart(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var g *Game = state.(*Game)
 
-	// Error(g.Players[0].Score, g.Players[0].Sun, g.Players[1].Score, g.Players[1].Sun)
+	// Error(g.Day, g.Players[0].Score, g.Players[0].Sun, g.Players[1].Score, g.Players[1].Sun)
+
+	return float64(calculateSunPerday(g, 0) - calculateSunPerday(g, 1))
+}
+
+// evalScoreEnd evaluation scores the game state from a player's perspective, returning 0.0 (lost), 0.5 (in progress), 1.0 (won)
+func evalScoreEnd(playerID int, state GameState) float64 {
+	// TODO evaluation score
+	var g *Game = state.(*Game)
+
+	// Error(g.Day, g.Players[0].Score, g.Players[0].Sun, g.Players[1].Score, g.Players[1].Sun)
 
 	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
 }
@@ -738,8 +764,8 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 	// Find the best move given a fixed number of state explorations.
 	var root *treeNode = newTreeNode(nil, nilMove{}, state, ucbC)
 	var startTime = time.Now().UnixNano()
-	var sim = 0
-	var iter = 0
+	// var sim = 0
+	// var iter = 0
 	for {
 		// Start at the top of the tree again.
 		var node *treeNode = root
@@ -773,7 +799,7 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 			var randomIndex int = rand.Intn(len(availableMoves))
 			var move Move = availableMoves[randomIndex]
 			simulatedState.MakeMove(move)
-			sim++
+			// sim++
 		}
 
 		// Backpropagate.
@@ -783,17 +809,12 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 		if time.Now().UnixNano()-startTime > timeout {
 			break
 		}
-		iter++
+		// iter++
 	}
-	Error(iter, sim)
+	// Error(iter, sim)
 
 	// The best move to take is going to be the root nodes most visited child.
 	sort.Sort(byVisits(root.children))
-
-	lasIdx := len(root.children) - 1
-	var g = root.children[lasIdx].state.(*Game)
-	var bestScore = evalScore(0, root.children[lasIdx].state)
-	Error(bestScore, g.Players[0].Score, g.Players[0].Sun, g.Players[1].Score, g.Players[1].Sun)
 
 	return root.children[0].move // Descending by visits.
 }
