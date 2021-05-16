@@ -149,7 +149,6 @@ type Game struct {
 	// current game state from input
 	Day               int
 	Nutrients         int
-	Cells             []*Cell
 	PossibleActions   []Action
 	Trees             []*Tree   // tree is index by cell ID
 	Players           []*Player // player 0 is me and 1 is opponent
@@ -157,8 +156,6 @@ type Game struct {
 
 	// hidden game state
 	DyingTrees     []int
-	Coords         []CubeCoord
-	CoordCellMaps  map[CubeCoord]*Cell
 	Shadows        map[int]int
 	sunOrientation int
 }
@@ -194,22 +191,13 @@ func getOpponentId(playerID int) int {
 
 // Clone makes a deep copy of the game state.
 func (g *Game) Clone() GameState {
-	newGame := &Game{}
-
-	newGame.JustMovedPlayerId = g.JustMovedPlayerId
-	newGame.ActivePlayerId = g.ActivePlayerId
-
-	newGame.Day = g.Day
-	newGame.Nutrients = g.Nutrients
-
-	newGame.Cells = make([]*Cell, numberOfCells)
-	for i, v := range g.Cells {
-		newGame.Cells[i] = &Cell{
-			Index:     v.Index,
-			Richness:  v.Richness,
-			Neighbors: v.Neighbors,
-		}
+	newGame := &Game{
+		JustMovedPlayerId: g.JustMovedPlayerId,
+		ActivePlayerId:    g.ActivePlayerId,
+		Day:               g.Day,
+		Nutrients:         g.Nutrients,
 	}
+
 	newGame.Trees = make([]*Tree, numberOfCells)
 	for i, v := range g.Trees {
 		newGame.Trees[i] = &Tree{
@@ -227,37 +215,43 @@ func (g *Game) Clone() GameState {
 		}
 	}
 
+	newGame.PossibleActions = make([]Action, len(g.PossibleActions))
+	for i, v := range g.PossibleActions {
+		newGame.PossibleActions[i] = Action{
+			Type:       v.Type,
+			TargetCell: v.TargetCell,
+			SourceCell: v.SourceCell,
+		}
+	}
+
 	newGame.DyingTrees = g.DyingTrees
-	newGame.Coords = g.Coords
-	newGame.CoordCellMaps = g.CoordCellMaps
 	newGame.Shadows = g.Shadows
 	newGame.sunOrientation = g.sunOrientation
 
 	return newGame
 }
 
-// AvailableMoves returns all the available moves.
-func (g *Game) AvailableMoves() []Move {
-	activePlayerID := g.ActivePlayerId
-	var moves []Move // MCTS move availables
+func (g *Game) updatePossibleAction() {
+	var activePlayerID = g.ActivePlayerId
+	g.PossibleActions = nil
 
 	if g.Day > MAX_ROUNDS { // No move if the game end
-		return moves
+		return
 	}
 
-	moves = append(moves, &Action{ActionTypeWait, 0, 0}) // add wait
+	g.PossibleActions = append(g.PossibleActions, Action{ActionTypeWait, 0, 0}) // add wait
 
 	// For each tree, where they can seed.
 	// For each tree, if they can grow.
 	var seedCost = g.getCostFor(0, activePlayerID)
 	for _, tree := range g.Trees {
 		if tree.OwnerID == activePlayerID {
-			var coord = g.Coords[tree.CellID]
+			var coord = Coords[tree.CellID]
 			if g.playerCanSeedFrom(activePlayerID, tree, seedCost) {
 				for _, targetCoord := range g.getCoordsInRange(coord, tree.Size) {
-					targetCell := g.CoordCellMaps[targetCoord]
+					targetCell := CoordCellMaps[targetCoord]
 					if g.playerCanSeedTo(targetCell) {
-						moves = append(moves, &Action{ActionTypeSeed, targetCell.Index, tree.CellID})
+						g.PossibleActions = append(g.PossibleActions, Action{ActionTypeSeed, targetCell.Index, tree.CellID})
 					}
 				}
 			}
@@ -265,12 +259,21 @@ func (g *Game) AvailableMoves() []Move {
 			growCost := g.getGrowthCost(tree)
 			if growCost <= g.Players[activePlayerID].Sun && !tree.Dormant {
 				if tree.Size == TREE_TALL {
-					moves = append(moves, &Action{ActionTypeComplete, tree.CellID, 0})
+					g.PossibleActions = append(g.PossibleActions, Action{ActionTypeComplete, tree.CellID, 0})
 				} else {
-					moves = append(moves, &Action{ActionTypeGrow, tree.CellID, 0})
+					g.PossibleActions = append(g.PossibleActions, Action{ActionTypeGrow, tree.CellID, 0})
 				}
 			}
 		}
+	}
+}
+
+// AvailableMoves returns all the available moves.
+func (g *Game) AvailableMoves() []Move {
+	var moves []Move // MCTS move availables
+
+	for _, a := range g.PossibleActions {
+		moves = append(moves, &a)
 	}
 
 	return moves
@@ -294,6 +297,8 @@ func (g *Game) MakeMove(move Move) {
 			g.performSunGatheringUpdate()
 		}
 	}
+
+	g.updatePossibleAction()
 }
 
 func (g *Game) updatePlayerTurn() {
@@ -314,10 +319,10 @@ func (g *Game) calculateShadows() {
 	g.Shadows = make(map[int]int)
 	for _, tree := range g.Trees {
 		if tree.Size != TREE_NONE {
-			var coord = g.Coords[tree.CellID]
+			var coord = Coords[tree.CellID]
 			for i := 1; i <= tree.Size; i++ {
 				var tempCoord = coord.NeighborByDistance(g.sunOrientation, i)
-				var cell = g.CoordCellMaps[tempCoord]
+				var cell = CoordCellMaps[tempCoord]
 				if cell != nil {
 					g.Shadows[cell.Index] = Max(g.Shadows[cell.Index], tree.Size)
 				}
@@ -347,7 +352,7 @@ func (g *Game) performSunMoveUpdate() {
 
 func (g *Game) removeDyingTrees() {
 	for _, dyingTreeIdx := range g.DyingTrees {
-		var cell = g.Cells[dyingTreeIdx]
+		var cell = Cells[dyingTreeIdx]
 		var dyingTree = g.Trees[dyingTreeIdx]
 		var points = g.Nutrients
 		if cell.Richness == RICHNESS_OK {
@@ -437,19 +442,23 @@ func (g *Game) getCostFor(size, ownerID int) int {
 	return baseCost + sameTreeCount
 }
 
+// Global variable
+var game Game
+var numberOfCells int
+var Cells []*Cell
+var Coords []CubeCoord // TODO test this
+var CoordCellMaps map[CubeCoord]*Cell
 var index = 0
 
-func (g *Game) generateCell(coord CubeCoord, richness int) {
-	g.Coords[index] = coord
-	g.CoordCellMaps[coord] = g.Cells[index]
+func generateCell(coord CubeCoord, richness int) {
+	Coords[index] = coord
+	CoordCellMaps[coord] = Cells[index]
 	index++
 }
 
-func (g *Game) generateCoords() {
-	g.Coords = make([]CubeCoord, numberOfCells)
-	g.CoordCellMaps = make(map[CubeCoord]*Cell)
+func generateCoords() {
 	centre := CubeCoord{0, 0, 0}
-	g.generateCell(centre, RICHNESS_LUSH)
+	generateCell(centre, RICHNESS_LUSH)
 
 	coord := centre.Neighbor(0)
 
@@ -457,11 +466,11 @@ func (g *Game) generateCoords() {
 		for orientation := 0; orientation < 6; orientation++ {
 			for count := 0; count < distance; count++ {
 				if distance == MAP_RING_COUNT {
-					g.generateCell(coord, RICHNESS_POOR)
+					generateCell(coord, RICHNESS_POOR)
 				} else if distance == MAP_RING_COUNT-1 {
-					g.generateCell(coord, RICHNESS_OK)
+					generateCell(coord, RICHNESS_OK)
 				} else {
-					g.generateCell(coord, RICHNESS_LUSH)
+					generateCell(coord, RICHNESS_LUSH)
 				}
 				coord = coord.Neighbor((orientation + 2) % 6)
 			}
@@ -480,11 +489,11 @@ func (g *Game) getCoordsInRange(center CubeCoord, N int) []CubeCoord {
 	return results
 }
 
-var game Game
-var numberOfCells int
-
 func main() {
 	// rand.Seed(1)
+	Cells = make([]*Cell, numberOfCells)
+	Coords = make([]CubeCoord, numberOfCells)
+	CoordCellMaps = make(map[CubeCoord]*Cell)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 1000000), 1000000)
@@ -496,7 +505,6 @@ func main() {
 	game.JustMovedPlayerId = 1
 
 	game.Nutrients = 20
-	game.Cells = make([]*Cell, numberOfCells)
 	game.Trees = make([]*Tree, numberOfCells) // tree index by cellIndex and size by numberOfCells
 
 	for i := 0; i < numberOfCells; i++ {
@@ -504,7 +512,7 @@ func main() {
 		scanner.Scan()
 		fmt.Sscan(scanner.Text(), &index, &richness, &neigh0, &neigh1, &neigh2, &neigh3, &neigh4, &neigh5)
 
-		game.Cells[index] = &Cell{
+		Cells[index] = &Cell{
 			index,
 			richness,
 			[]int{
@@ -514,7 +522,7 @@ func main() {
 		game.Trees[index] = &Tree{index, TREE_NONE, -1, false} // initial tree
 	}
 
-	game.generateCoords()
+	generateCoords()
 	game.Players = make([]*Player, 2)
 	game.Players[0] = &Player{}
 	game.Players[1] = &Player{}
@@ -729,6 +737,8 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 	// Find the best move given a fixed number of state explorations.
 	var root *treeNode = newTreeNode(nil, nilMove{}, state, ucbC)
 	var startTime = time.Now().UnixNano()
+	var sim = 0
+	var iter = 0
 	for {
 		// Start at the top of the tree again.
 		var node *treeNode = root
@@ -762,6 +772,7 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 			var randomIndex int = rand.Intn(len(availableMoves))
 			var move Move = availableMoves[randomIndex]
 			simulatedState.MakeMove(move)
+			sim++
 		}
 
 		// Backpropagate.
@@ -771,7 +782,9 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 		if time.Now().UnixNano()-startTime > timeout {
 			break
 		}
+		iter++
 	}
+	Error(iter, sim)
 
 	// The best move to take is going to be the root nodes most visited child.
 	sort.Sort(byVisits(root.children))
