@@ -147,12 +147,11 @@ type Game struct {
 	ActivePlayerId    int // This is the player who's current turn it is.
 
 	// current game state from input
-	Day               int
-	Nutrients         int
-	PossibleActions   []Action
-	Trees             []*Tree   // tree is index by cell ID
-	Players           []*Player // player 0 is me and 1 is opponent
-	OpponentIsWaiting bool
+	Day             int
+	Nutrients       int
+	PossibleActions []*Action
+	Trees           []*Tree   // tree is index by cell ID
+	Players         []*Player // player 0 is me and 1 is opponent
 
 	// hidden game state
 	DyingTrees     []int
@@ -179,7 +178,7 @@ func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var g *Game = state.(*Game)
 
-	Error(g.Day, g.Players[0].Score, g.Players[1].Score)
+	// Error(g.Players[0].Score, g.Players[0].Sun, g.Players[1].Score, g.Players[1].Sun)
 
 	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
 }
@@ -220,9 +219,9 @@ func (g *Game) Clone() GameState {
 		}
 	}
 
-	newGame.PossibleActions = make([]Action, len(g.PossibleActions))
+	newGame.PossibleActions = make([]*Action, len(g.PossibleActions))
 	for i, v := range g.PossibleActions {
-		newGame.PossibleActions[i] = Action{
+		newGame.PossibleActions[i] = &Action{
 			Type:       v.Type,
 			TargetCell: v.TargetCell,
 			SourceCell: v.SourceCell,
@@ -240,7 +239,7 @@ func (g *Game) updatePossibleAction() {
 		return
 	}
 
-	g.PossibleActions = append(g.PossibleActions, Action{ActionTypeWait, 0, 0}) // add wait
+	g.PossibleActions = append(g.PossibleActions, &Action{ActionTypeWait, 0, 0}) // add wait
 
 	// For each tree, where they can seed.
 	// For each tree, if they can grow.
@@ -252,7 +251,7 @@ func (g *Game) updatePossibleAction() {
 				for _, targetCoord := range g.getCoordsInRange(coord, tree.Size) {
 					targetCell := CoordCellMaps[targetCoord]
 					if g.playerCanSeedTo(targetCell) {
-						g.PossibleActions = append(g.PossibleActions, Action{ActionTypeSeed, targetCell.Index, tree.CellID})
+						g.PossibleActions = append(g.PossibleActions, &Action{ActionTypeSeed, targetCell.Index, tree.CellID})
 					}
 				}
 			}
@@ -260,9 +259,9 @@ func (g *Game) updatePossibleAction() {
 			growCost := g.getGrowthCost(tree)
 			if growCost <= g.Players[activePlayerID].Sun && !tree.Dormant {
 				if tree.Size == TREE_TALL {
-					g.PossibleActions = append(g.PossibleActions, Action{ActionTypeComplete, tree.CellID, 0})
+					g.PossibleActions = append(g.PossibleActions, &Action{ActionTypeComplete, tree.CellID, 0})
 				} else {
-					g.PossibleActions = append(g.PossibleActions, Action{ActionTypeGrow, tree.CellID, 0})
+					g.PossibleActions = append(g.PossibleActions, &Action{ActionTypeGrow, tree.CellID, 0})
 				}
 			}
 		}
@@ -274,7 +273,7 @@ func (g *Game) AvailableMoves() []Move {
 	var moves []Move // MCTS move availables
 
 	for _, a := range g.PossibleActions {
-		moves = append(moves, &a)
+		moves = append(moves, a)
 	}
 
 	return moves
@@ -540,8 +539,7 @@ func main() {
 
 		scanner.Scan()
 		var _oppIsWaiting int
-		fmt.Sscan(scanner.Text(), &game.Players[1].Sun, &game.Players[1].Sun, &_oppIsWaiting)
-		game.OpponentIsWaiting = _oppIsWaiting != 0
+		fmt.Sscan(scanner.Text(), &game.Players[1].Sun, &game.Players[1].Score, &_oppIsWaiting)
 
 		var numberOfTrees int
 		scanner.Scan()
@@ -568,12 +566,12 @@ func main() {
 		scanner.Scan()
 		fmt.Sscan(scanner.Text(), &numberOfPossibleMoves)
 
-		game.PossibleActions = make([]Action, numberOfPossibleMoves)
+		game.PossibleActions = make([]*Action, numberOfPossibleMoves)
 		for i := 0; i < numberOfPossibleMoves; i++ {
 			scanner.Scan()
 			possibleMove := scanner.Text()
 			toks := strings.Split(possibleMove, " ")
-			action := Action{toks[0], 0, 0}
+			action := &Action{toks[0], 0, 0}
 			switch toks[0] {
 			case "COMPLETE":
 				action.TargetCell, _ = strconv.Atoi(toks[1])
@@ -791,6 +789,12 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 
 	// The best move to take is going to be the root nodes most visited child.
 	sort.Sort(byVisits(root.children))
+
+	lasIdx := len(root.children) - 1
+	var g = root.children[lasIdx].state.(*Game)
+	var bestScore = evalScore(0, root.children[lasIdx].state)
+	Error(bestScore, g.Players[0].Score, g.Players[0].Sun, g.Players[1].Score, g.Players[1].Sun)
+
 	return root.children[0].move // Descending by visits.
 }
 
