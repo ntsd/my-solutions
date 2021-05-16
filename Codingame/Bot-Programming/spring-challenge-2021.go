@@ -157,7 +157,7 @@ type Game struct {
 	// hidden game state
 	DyingTrees     []int
 	Shadows        map[int]int
-	sunOrientation int
+	SunOrientation int
 }
 
 func (game *Game) move() {
@@ -179,6 +179,8 @@ func evalScore(playerID int, state GameState) float64 {
 	// TODO evaluation score
 	var g *Game = state.(*Game)
 
+	Error(g.Day, g.Players[0].Score, g.Players[1].Score)
+
 	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
 }
 
@@ -196,6 +198,9 @@ func (g *Game) Clone() GameState {
 		ActivePlayerId:    g.ActivePlayerId,
 		Day:               g.Day,
 		Nutrients:         g.Nutrients,
+		DyingTrees:        g.DyingTrees,
+		Shadows:           g.Shadows,
+		SunOrientation:    g.SunOrientation,
 	}
 
 	newGame.Trees = make([]*Tree, numberOfCells)
@@ -223,10 +228,6 @@ func (g *Game) Clone() GameState {
 			SourceCell: v.SourceCell,
 		}
 	}
-
-	newGame.DyingTrees = g.DyingTrees
-	newGame.Shadows = g.Shadows
-	newGame.sunOrientation = g.sunOrientation
 
 	return newGame
 }
@@ -307,11 +308,11 @@ func (g *Game) updatePlayerTurn() {
 }
 
 func (g *Game) setSunOrientation(orientation int) {
-	g.sunOrientation = orientation % 6
+	g.SunOrientation = orientation % 6
 }
 
 func (g *Game) moveSunOrientation() {
-	g.sunOrientation = (g.sunOrientation + 1) % 6
+	g.SunOrientation = (g.SunOrientation + 1) % 6
 }
 
 func (g *Game) calculateShadows() {
@@ -321,7 +322,7 @@ func (g *Game) calculateShadows() {
 		if tree.Size != TREE_NONE {
 			var coord = Coords[tree.CellID]
 			for i := 1; i <= tree.Size; i++ {
-				var tempCoord = coord.NeighborByDistance(g.sunOrientation, i)
+				var tempCoord = coord.NeighborByDistance(g.SunOrientation, i)
 				var cell = CoordCellMaps[tempCoord]
 				if cell != nil {
 					g.Shadows[cell.Index] = Max(g.Shadows[cell.Index], tree.Size)
