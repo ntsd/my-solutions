@@ -165,7 +165,7 @@ func (g *Game) move() {
 	// Timeout to simulate in nanosec
 	var timeout int64 = 95000000 // 95ms
 
-	if g.Day < 15 {
+	if g.Day < 10 {
 		var simulations uint = 10
 		var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreStart)
 		fmt.Println(move.(*Action).String())
@@ -181,9 +181,7 @@ func calculateSunPerday(g *Game, playerId int) int {
 	var sun = 0
 	for _, tree := range g.Trees {
 		if tree.OwnerID == playerId {
-			if g.Shadows[tree.CellID] == 0 || g.Shadows[tree.CellID] < tree.Size {
-				sun += tree.Size
-			}
+			sun += tree.Size
 		}
 	}
 	return sun
