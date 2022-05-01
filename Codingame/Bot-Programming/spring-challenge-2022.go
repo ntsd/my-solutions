@@ -193,10 +193,8 @@ func main() {
 		}
 		opBaseX, opBaseY = 0, 0
 		attackPosition = Position{
-			// x: 2300,
-			// y: 2000,
-			x: 4900,
-			y: 1000,
+			x: 2300,
+			y: 2000,
 		}
 	}
 
