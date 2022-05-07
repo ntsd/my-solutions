@@ -159,19 +159,26 @@ type Game struct {
 	SunOrientation int
 }
 
-func (g *Game) move() {
+func (g *Game) action() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
-	// Timeout to simulate in nanosec
-	var timeout int64 = 95000000 // 95ms
-
-	if g.Day < 10 {
-		var simulations uint = 10
+	if g.Day == 0 {
+		var timeout int64 = 990000000 // 990ms
+		var simulations uint = MAX_ROUNDS
 		var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreStart)
 		fmt.Println(move.(*Action).String())
 		return
 	}
-	var simulations uint = 100 * MAX_ROUNDS
+
+	// Timeout to simulate in nanosec
+	var timeout int64 = 90000000 // 90ms
+	var simulations uint = MAX_ROUNDS
+
+	if g.Day < 10 {
+		var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreStart)
+		fmt.Println(move.(*Action).String())
+		return
+	}
 	var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreEnd)
 	fmt.Println(move.(*Action).String())
 	return
@@ -612,7 +619,7 @@ func main() {
 			game.PossibleActions[i] = action
 		}
 
-		game.move()
+		game.action()
 	}
 }
 
@@ -758,12 +765,16 @@ func (n nilMove) Probability() float64 {
 
 // Uct is an Upper Confidence Bound Tree search through game stats for an optimal move, given a starting game state.
 func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerId int, scorer Scorer) Move {
+	// TODO use previous tree
 
 	// Find the best move given a fixed number of state explorations.
 	var root *treeNode = newTreeNode(nil, nilMove{}, state, ucbC)
 	var startTime = time.Now().UnixNano()
-	// var sim = 0
-	// var iter = 0
+
+	// log iter and simulate
+	var sim = 0
+	var iter = 0
+
 	for {
 		// Start at the top of the tree again.
 		var node *treeNode = root
@@ -797,7 +808,7 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 			var randomIndex int = rand.Intn(len(availableMoves))
 			var move Move = availableMoves[randomIndex]
 			simulatedState.MakeMove(move)
-			// sim++
+			sim++
 		}
 
 		// Backpropagate.
@@ -807,9 +818,11 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 		if time.Now().UnixNano()-startTime > timeout {
 			break
 		}
-		// iter++
+		iter++
 	}
-	// Error(iter, sim)
+
+	// log iter and simulate
+	Error("iters:", iter, "sims:", sim, "sims per iter:", simulations)
 
 	// The best move to take is going to be the root nodes most visited child.
 	sort.Sort(byVisits(root.children))

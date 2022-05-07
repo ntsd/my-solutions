@@ -53,7 +53,7 @@ func main() {
 	tCopy := time.Duration(0)
 	tClonePointer := time.Duration(0)
 	tCloneNonPointer := time.Duration(0)
-	round := 3000
+	round := 100000
 	for {
 		if i == round {
 			break
