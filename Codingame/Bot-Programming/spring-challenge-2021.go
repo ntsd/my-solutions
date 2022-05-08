@@ -159,27 +159,32 @@ type Game struct {
 	SunOrientation int
 }
 
+func (g *Game) isEnded() bool {
+	return g.Day > MAX_ROUNDS
+}
+
 func (g *Game) action() {
 	// the constant biasing exploitation vs exploration
 	var ucbC float64 = 1.0
-	if g.Day == 0 {
-		var timeout int64 = 990000000 // 990ms
-		var simulations uint = MAX_ROUNDS
-		var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreStart)
-		fmt.Println(move.(*Action).String())
-		return
-	}
+	// if g.Day == 0 {
+	// 	var timeout int64 = 990000000 // 990ms
+	// 	var simulations uint = MAX_ROUNDS
+	// 	var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreStart)
+	// 	fmt.Println(move.(*Action).String())
+	// 	return
+	// }
 
 	// Timeout to simulate in nanosec
 	var timeout int64 = 90000000 // 90ms
-	var simulations uint = MAX_ROUNDS
 
-	if g.Day < 10 {
-		var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreStart)
-		fmt.Println(move.(*Action).String())
-		return
-	}
-	var move Move = Uct(g, timeout, simulations, ucbC, 0, evalScoreEnd)
+	// if g.Day < 5 {
+	// 	var depth uint = 2 * 6 // 2 days
+	// 	var move Move = Uct(g, timeout, depth, ucbC, 0, evalScoreStart)
+	// 	fmt.Println(move.(*Action).String())
+	// 	return
+	// }
+	var depth uint = MAX_ROUNDS * 6 // depth to the end
+	var move Move = Uct(g, timeout, depth, ucbC, 0, evalScoreEnd)
 	fmt.Println(move.(*Action).String())
 	return
 }
@@ -211,7 +216,11 @@ func evalScoreEnd(playerID int, state GameState) float64 {
 
 	// Error(g.Day, g.Players[0].Score, g.Players[0].Sun, g.Players[1].Score, g.Players[1].Sun)
 
-	return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
+	if g.isEnded() {
+		return float64((g.Players[0].Score + g.Players[0].Sun/3) - (g.Players[1].Score + g.Players[1].Sun/3))
+	} else {
+		return 0.0
+	}
 }
 
 func getOpponentId(playerID int) int {
@@ -266,7 +275,7 @@ func (g *Game) updatePossibleAction() {
 	var activePlayerID = g.ActivePlayerId
 	g.PossibleActions = nil
 
-	if g.Day > MAX_ROUNDS { // No move if the game end
+	if g.isEnded() { // No move if the game end
 		return
 	}
 
@@ -764,7 +773,7 @@ func (n nilMove) Probability() float64 {
 }
 
 // Uct is an Upper Confidence Bound Tree search through game stats for an optimal move, given a starting game state.
-func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerId int, scorer Scorer) Move {
+func Uct(state GameState, timeout int64, depth uint, ucbC float64, playerId int, scorer Scorer) Move {
 	// TODO use previous tree
 
 	// Find the best move given a fixed number of state explorations.
@@ -797,7 +806,7 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 		// From the new child, make many simulated random steps to get a fuzzy idea of how good
 		// the move that created the child is.
 		var simulatedState GameState = node.state.Clone()
-		for j := 0; j < int(simulations); j++ {
+		for j := 0; j < int(depth); j++ {
 			// What moves can further the game state?
 			var availableMoves []Move = simulatedState.AvailableMoves()
 			// Is the game over?
@@ -822,7 +831,7 @@ func Uct(state GameState, timeout int64, simulations uint, ucbC float64, playerI
 	}
 
 	// log iter and simulate
-	Error("iters:", iter, "sims:", sim, "sims per iter:", simulations)
+	Error("iters:", iter, "sims:", sim, "sims per iter:", sim/iter)
 
 	// The best move to take is going to be the root nodes most visited child.
 	sort.Sort(byVisits(root.children))
