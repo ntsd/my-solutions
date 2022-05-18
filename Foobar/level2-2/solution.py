@@ -1,14 +1,10 @@
-from operator import le
-
-
 def solution(n, base):
     cycle = []
     k = len(n)
-    return command(cycle, n, k, base, 0)
+    return command(cycle, n, k, base)
 
-def command(cycle, n, k, base, count):
+def command(cycle, n, k, base):
     cycle.append(n)
-    prev_n = n
     x = "".join(sorted(list(n), reverse=True))
     y = "".join(sorted(list(n)))
     x_base10 = int(x, base)
@@ -16,12 +12,10 @@ def command(cycle, n, k, base, count):
     z = numberToBase(x_base10 - y_base10, base)
     len_z = len(z)
     n = "0" * (k - len_z) + z
-    print('B', cycle, n, k, base, count)
-    if n in cycle: # TODO chec it's cycle
-        return count
-    if prev_n == n:
-        return 1
-    return command(cycle, n, k, base, count + 1)
+    # print('B', cycle, n, k, base)
+    if n in cycle:
+        return len(cycle) - cycle.index(n)
+    return command(cycle, n, k, base)
 
 def numberToBase(x, b):
     s=""
