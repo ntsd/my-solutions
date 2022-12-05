@@ -1,4 +1,4 @@
-text = """"""
+text = """y,n='#\n';print(y*16+n+(y+':'*14+y+n)*6+y*16)"""
 
 code = text.encode().decode('utf16')
 
