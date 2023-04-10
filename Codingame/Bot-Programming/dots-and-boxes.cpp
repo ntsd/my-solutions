@@ -37,17 +37,26 @@ bool isSidePlayed(const string &boxName, char side) {
 }
 
 vector<pair<string, char>> getValidMoves() {
-  vector<pair<string, char>> validMoves;
+    vector<pair<string, char>> validMoves;
+    vector<pair<string, char>> priorityMoves;
 
-  for (const auto &box : boxes) {
-    for (const auto &side : box.sides) {
-      if (playedSides.find({box.name, side}) == playedSides.end()) {
-        validMoves.push_back({box.name, side});
-      }
+    for (const Box &box : boxes) {
+        for (char side : box.sides) {
+            string boxName = box.name;
+            if (playedSides.find({boxName, side}) == playedSides.end()) {
+                if (box.sides.size() == 1) {
+                    priorityMoves.push_back({boxName, side});
+                } else {
+                    validMoves.push_back({boxName, side});
+                }
+            }
+        }
     }
-  }
 
-  return validMoves;
+    if (!priorityMoves.empty()) {
+        return priorityMoves;
+    }
+    return validMoves;
 }
 
 int alphabeta(int depth, bool isMax, int alpha, int beta, int playerScore,
