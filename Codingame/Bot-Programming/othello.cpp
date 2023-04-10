@@ -7,103 +7,149 @@
 
 using namespace std;
 
-const int MAX_TIME_MS = 100; // 150
+const int MAX_TIME_MS = 50; // 150
 
 class State {
 public:
-  State(int boardSize, int playerID, const vector<string> &board)
-      : boardSize(boardSize), playerID(playerID), board(board),
+  State(int board_size, int player_id, const vector<string> &board)
+      : board_size(board_size), player_id(player_id), board(board),
         last_move(-1, -1) {}
-
-  void apply_move(int x, int y) {
-    board[x][y] = '0' + playerID;
-    for (int dx = -1; dx <= 1; dx++) {
-      for (int dy = -1; dy <= 1; dy++) {
-        if (dx == 0 && dy == 0)
-          continue;
-        int nx = x + dx, ny = y + dy;
-        while (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize &&
-               board[nx][ny] != '.') {
-          if (board[nx][ny] == '0' + playerID) {
-            int px = x + dx, py = y + dy;
-            while (px != nx || py != ny) {
-              board[px][py] = '0' + playerID;
-              px += dx, py += dy;
-            }
-            break;
-          }
-          nx += dx, ny += dy;
-        }
-      }
-    }
-    last_move = make_pair(x, y);
-    playerID = 1 - playerID;
-  }
-
-  int get_winner() const {
-    int cnt0 = 0, cnt1 = 0;
-    for (int i = 0; i < boardSize; i++) {
-      for (int j = 0; j < boardSize; j++) {
-        if (board[i][j] == '0')
-          cnt0++;
-        else if (board[i][j] == '1')
-          cnt1++;
-      }
-    }
-    if (cnt0 > cnt1)
-      return 0;
-    else if (cnt0 < cnt1)
-      return 1;
-    else
-      return -1;
-  }
 
   vector<pair<int, int>> get_legal_moves() const {
     vector<pair<int, int>> legal_moves;
-    for (int i = 0; i < boardSize; i++) {
-      for (int j = 0; j < boardSize; j++) {
-        if (board[i][j] != '.')
-          continue;
-        bool valid = false;
-        for (int dx = -1; dx <= 1; dx++) {
-          for (int dy = -1; dy <= 1; dy++) {
-            if (dx == 0 && dy == 0)
-              continue;
-            int nx = i + dx, ny = j + dy;
-            while (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize &&
-                   board[nx][ny] != '.') {
-              if (board[nx][ny] == '0' + playerID) {
-                valid = true;
-                break;
-              }
-              nx += dx, ny += dy;
-            }
-            if (valid)
-              break;
+    for (int i = 0; i < board_size; i++) {
+      for (int j = 0; j < board_size; j++) {
+        if (board[i][j] == '.') {
+          if (is_legal_move(i, j)) {
+            legal_moves.emplace_back(i, j);
           }
-          if (valid)
-            break;
         }
-        if (valid)
-          legal_moves.emplace_back(i, j);
       }
     }
     return legal_moves;
   }
 
+  void apply_move(int row, int col) {
+    if (!is_legal_move(row, col)) {
+      throw runtime_error("Invalid move");
+    }
+    board[row][col] = player_id == 0 ? '0' : '1';
+    flip_pieces(row, col);
+    last_move = {row, col};
+    player_id = 1 - player_id;
+  }
+
   bool game_over() const { return get_legal_moves().empty(); }
 
+  pair<int, int> get_scores() const {
+    int black_count = 0;
+    int white_count = 0;
+    for (const auto &row : board) {
+      for (char c : row) {
+        if (c == '0') {
+          black_count++;
+        } else if (c == '1') {
+          white_count++;
+        }
+      }
+    }
+    return {black_count, white_count};
+  }
+
+  pair<int, int> get_last_move() const { return last_move; }
+
+  int get_winner() const {
+    auto scores = get_scores();
+    if (scores.first > scores.second) {
+      return 0;
+    } else if (scores.first < scores.second) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+
   bool equal(State &b) {
-    return (boardSize == b.boardSize && playerID == b.playerID &&
+    return (board_size == b.board_size && player_id == b.player_id &&
             board == b.board && last_move == b.last_move);
   };
 
   State copy() const { return *this; }
 
-  int playerID;
+private:
+  int board_size;
+  int player_id;
   vector<string> board;
-  int boardSize;
   pair<int, int> last_move;
+
+  bool is_legal_move(int row, int col) const {
+    if (row < 0 || row >= board_size || col < 0 || col >= board_size) {
+      return false;
+    }
+    if (board[row][col] != '.') {
+      return false;
+    }
+    bool legal = false;
+    for (int dr = -1; dr <= 1; dr++) {
+      for (int dc = -1; dc <= 1; dc++) {
+        if (dr == 0 && dc == 0) {
+          continue;
+        }
+        int r = row + dr;
+        int c = col + dc;
+        while (r >= 0 && r < board_size && c >= 0 && c < board_size) {
+          if (board[r][c] == '.') {
+            break;
+          }
+          if (board[r][c] == (player_id == 0 ? '1' : '0')) {
+            r += dr;
+            c += dc;
+          } else {
+            legal = true;
+            break;
+          }
+        }
+      }
+    }
+    return legal;
+  }
+
+  void flip_pieces(int row, int col) {
+    char curr_player = (player_id == 0 ? '0' : '1');
+    char other_player = (player_id == 0 ? '1' : '0');
+    board[row][col] = curr_player;
+
+    for (int dr = -1; dr <= 1; dr++) {
+      for (int dc = -1; dc <= 1; dc++) {
+        if (dr == 0 && dc == 0) {
+          continue;
+        }
+        int r = row + dr;
+        int c = col + dc;
+        bool found_other_player = false;
+        while (r >= 0 && r < board_size && c >= 0 && c < board_size) {
+          if (board[r][c] == '.') {
+            break;
+          }
+          if (board[r][c] == other_player) {
+            r += dr;
+            c += dc;
+            found_other_player = true;
+          } else {
+            if (found_other_player) {
+              // Flip all the pieces between (row, col) and (r, c)
+              while (r != row + dr || c != col + dc) {
+                r -= dr;
+                c -= dc;
+                board[r][c] = curr_player;
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
 };
 
 class Node {
@@ -168,13 +214,10 @@ private:
 
 class MCTS {
 public:
-  MCTS() : root(nullptr), time_budget(0) {}
-  MCTS(int time_budget) : root(nullptr), time_budget(time_budget) {}
-
-  ~MCTS() { delete root; }
+  MCTS(int time_budget) : time_budget(time_budget) {}
 
   pair<int, int> search(const State &state) {
-    root = new Node(state);
+    Node *root = new Node(state);
     auto start_time = chrono::high_resolution_clock::now();
     while (true) {
       auto current_time = chrono::high_resolution_clock::now();
@@ -194,14 +237,7 @@ public:
       }
     }
     Node *best_child = root->best_child(0);
-    pair<int, int> move = {-1, -1};
-    for (auto &child : root->get_children()) {
-      if (child == best_child) {
-        move = child->get_state().last_move;
-        break;
-      }
-    }
-    return move;
+    return best_child->get_state().get_last_move();
   }
 
 private:
@@ -253,36 +289,36 @@ private:
     }
   }
 
-  Node *root;
   int time_budget;
 };
 
 int main() {
-    srand(time(NULL));
+  srand(time(NULL));
 
-    int player_id, board_size;
-    cin >> player_id >> board_size;
+  int player_id, board_size;
+  cin >> player_id >> board_size;
 
-    MCTS mcts(MAX_TIME_MS);
+  MCTS mcts(MAX_TIME_MS);
 
-    while (true) {
-        vector<string> board(board_size);
-        for (int i = 0; i < board_size; i++) {
-            cin >> board[i];
-        }
-
-
-        int actionCount;
-        cin >> actionCount;
-        vector<string> actions(actionCount);
-        for (int i = 0; i < actionCount; i++) {
-            cin >> actions[i];
-        }
-
-        State state = State(board_size, player_id, board);
-        auto move = mcts.search(state);
-        cout << char('a' + move.second) << move.first + 1 << endl;
+  while (true) {
+    vector<string> board(board_size);
+    for (int i = 0; i < board_size; i++) {
+      cin >> board[i];
     }
 
-    return 0;
+    int actionCount;
+    cin >> actionCount;
+    vector<string> actions(actionCount);
+    for (int i = 0; i < actionCount; i++) {
+      cin >> actions[i];
+    }
+
+    State state = State(board_size, player_id, board);
+
+    auto move = mcts.search(state);
+
+    cout << "EXPERT " << char('a' + move.second) << move.first + 1 << endl;
+  }
+
+  return 0;
 }
