@@ -14,6 +14,23 @@ struct Cell {
   vector<int> neighbors;
 };
 
+double calculate_priority_factor(double my_score, double remaining_crystal,
+                                 double opp_score, double total_crystals) {
+  const double my_score_weight = 2.0;
+  const double remaining_crystal_weight = 1.0;
+  const double opp_score_weight = 1.5;
+
+  double max_score = max(my_score + opp_score, total_crystals);
+  double weight_sum =
+      my_score_weight + remaining_crystal_weight + opp_score_weight;
+
+  double priority_factor = (my_score * my_score_weight +
+                            remaining_crystal * remaining_crystal_weight +
+                            opp_score * opp_score_weight) /
+                           (weight_sum * max_score);
+  return priority_factor;
+}
+
 int main() {
   int number_of_cells;
   cin >> number_of_cells;
@@ -77,14 +94,41 @@ int main() {
     distances_from_my_bases.push_back(shortest_paths(cells[my_base_index]));
   }
 
+  double total_crystals = 0;
+  for (auto &cell : cells) {
+    // Calculate total crystals on the map
+    if (cell.type == 2 && cell.resources > 0) {
+      total_crystals += cell.resources;
+    }
+  }
+
+  int turn = 0;
   while (1) {
+    turn++;
+
     for (int i = 0; i < number_of_cells; i++) {
       Cell &cell = cells[i];
       cin >> cell.resources >> cell.my_ants >> cell.opp_ants;
       cin.ignore();
     }
 
-    int total_beacons = 100;
+    int total_ants = 0;
+    double my_score = 0;
+    double remaining_crystal = 0;
+    for (const Cell &cell : cells) {
+      if (cell.type == 2 && cell.resources > 0) {
+        if (cell.my_ants > 0) {
+          my_score += min(cell.resources, cell.my_ants);
+        }
+        remaining_crystal += cell.resources;
+      }
+      total_ants += cell.my_ants;
+    }
+
+    double opp_score = total_crystals - my_score - remaining_crystal;
+
+    double priority_factor = calculate_priority_factor(
+        my_score, remaining_crystal, opp_score, total_crystals);
 
     for (int resource_type = 1; resource_type <= 2; ++resource_type) {
       vector<pair<int, double>> targets;
@@ -126,13 +170,22 @@ int main() {
       sort(targets.begin(), targets.end(),
            [](const auto &a, const auto &b) { return a.second > b.second; });
 
+      int strength;
       // Send ants to high-priority targets
       for (const auto &[index, score] : targets) {
-        int strength = min(total_beacons, resource_type == 1 ? 5 : 20);
-        if (total_beacons - strength < 0)
+        if (resource_type == 1) {
+          // Ants (type 1); adjust strength with the priority_factor
+          strength =
+              min(total_ants, static_cast<int>(20 * (1.0 - priority_factor)));
+        } else {
+          // Crystals (type 2); adjust strength with the priority_factor
+          strength = min(total_ants, static_cast<int>(20 * priority_factor));
+        }
+
+        if (total_ants - strength < 0)
           break;
         cout << "BEACON " << index << " " << strength << ";";
-        total_beacons -= strength;
+        total_ants -= strength;
       }
     }
 
