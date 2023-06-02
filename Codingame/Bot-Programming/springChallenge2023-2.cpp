@@ -63,37 +63,72 @@ int main() {
 
     vector<int> distances_from_my_base = shortest_paths(cells[my_base_index]);
 
+    double total_crystals = 0;
+    for (auto &cell : cells) {
+        // Calculate total crystals on the map
+        if (cell.type == 2 && cell.resources > 0) {
+            total_crystals += cell.resources;
+        }
+    }
+
+    int turn = 0;
     while (1) {
+        turn++;
+
         for (int i = 0; i < number_of_cells; i++) {
             Cell &cell = cells[i];
             cin >> cell.resources >> cell.my_ants >> cell.opp_ants; cin.ignore();
         }
 
-        vector<pair<int, double>> targets;
+        double current_crystals = 0;
         for (const Cell &cell : cells) {
-            if (cell.type == 2 && cell.resources > 0 && cell.my_ants == 0) {
-                double score = static_cast<double>(cell.resources) / distances_from_my_base[cell.index];
-                targets.emplace_back(cell.index, score);
+            if (cell.type == 2 && cell.my_ants > 0) {
+                current_crystals += min(cell.resources, cell.my_ants);
             }
         }
 
-        // Sort targets based on their scores
-        sort(targets.begin(), targets.end(), [](const auto &a, const auto &b) {
-            return a.second > b.second;
-        });
+        double opp_score = total_crystals - current_crystals;
+        double priority = opp_score / total_crystals;
+        double ants_priority = 1 - priority;
 
-        // Send ants to high-priority targets
-        int total_beacons = 100;
-        for (const auto &[index, score] : targets) {
-            int strength = min(total_beacons, 20);
-            if (total_beacons - strength < 0) break;
-            cout << "BEACON " << index << " " << strength << ";";
-            total_beacons -= strength;
+        if (priority < 0.5 || turn < 100) {
+            priority = 0.5;
+            ants_priority = 0.5;
         }
 
-        // Place lines of beacons back to the base to harvest resources
+        if (opp_score > current_crystals) { // about to lose
+            ants_priority = 0;
+        }
+
+        int total_beacons = 100;
+
+        for (int resource_type = 1; resource_type <= 2; ++resource_type) {
+            vector<pair<int, double>> targets;
+
+            for (const Cell &cell : cells) {
+                if (cell.type == resource_type && cell.resources > 0 && cell.my_ants == 0) {
+                    double score = static_cast<double>(cell.resources) / distances_from_my_base[cell.index];
+                    targets.emplace_back(cell.index, score);
+                }
+            }
+
+            // Sort targets based on their scores
+            sort(targets.begin(), targets.end(), [](const auto &a, const auto &b) {
+                return a.second > b.second;
+            });
+
+            // Send ants to high-priority targets
+            for (const auto &[index, score] : targets) {
+                int strength = min(total_beacons, resource_type == 1 ? (int) (20 * ants_priority) : (int) (20 * priority));
+                if (total_beacons - strength < 0) break;
+                cout << "BEACON " << index << " " << strength << ";";
+                total_beacons -= strength;
+            }
+        }
+
+        // Create lines of beacons back to the base to harvest resources
         for (const Cell &cell : cells) {
-            if (cell.type == 2 && cell.resources > 0 && cell.my_ants > 0) {
+            if ((cell.type == 1 || cell.type == 2) && cell.resources > 0 && cell.my_ants > 0) {
                 cout << "LINE " << cell.index << " " << my_base_index << " 100;";
             }
         }
