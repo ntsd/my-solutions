@@ -1,3 +1,5 @@
+// seed=-3776771214155586000
+
 #include <algorithm>
 #include <chrono>
 #include <iostream>
